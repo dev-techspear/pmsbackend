@@ -1,3 +1,21 @@
+# ─── .NET build output & tooling ───────────────────────────
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ─── ASP.NET Core secrets — ignore the real file, keep a placeholder template ──
+# appsettings.json currently holds a real Azure AD ClientSecret, SQL connection
+# string, etc. Never commit it as-is — use `dotnet user-secrets` locally and
+# environment/Key Vault config in deployed environments instead.
+**/appsettings.json
+!**/appsettings.Example.json
+
+# ─── Legacy (source, Python/FastAPI) entries — kept in case this tree still
+# carries a Python virtualenv or cache from before the .NET migration ──────
 __pycache__/
 *.py[cod]
 *$py.class
