@@ -41,6 +41,11 @@ public static class AppConstants
     public const string PermTimeView = "time-view";
     public const string PermChatView = "chat-view";
     public const string PermChatPost = "chat-post";
+    public const string PermUserView = "user-view";
+    public const string PermUserCreate = "user-create";
+    public const string PermUserEdit = "user-edit";
+    public const string PermUserDelete = "user-delete";
+    public const string PermAutomationManage = "automation-manage";
 
     // Project chat
     public const int ChatMaxBodyLength = 4000;
@@ -57,6 +62,9 @@ public static class AppConstants
     ];
     // Shown inline as a preview; everything else is download-only.
     public static readonly string[] ChatInlineImageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
+    // How long a minted attachment-download SAS URL stays valid - long enough for one browser
+    // fetch, short enough that a leaked URL (e.g. in a proxy log) is useless soon after.
+    public const int ChatAttachmentSasMinutes = 10;
 
     // Short-lived credential for the chat WebSocket (a URL can end up in logs, so it must expire fast).
     public const string ChatTicketClaimType = "type";

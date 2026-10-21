@@ -28,8 +28,11 @@ public class TeamsController : BaseController
     [HttpGet]
     public async Task<IActionResult> ReadTeams([FromQuery] int skip = 0, [FromQuery] int limit = 100)
     {
+        // pmsfrontend's teamsService.getTeams() types this as a bare Team[] and uses it
+        // directly (Teams.tsx calls .filter()/.reduce() on the result) — match it, same
+        // as users/milestones/timelogs/templates.
         var result = await _teamService.GetTeamsAsync(skip, limit);
-        return OkResult(result);
+        return OkResult(result.Items);
     }
 
     [HttpGet("search")]

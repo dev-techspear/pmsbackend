@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PMS.Application.Common;
+using PMS.Application.Common.Interfaces;
 using PMS.Application.Services.Implementations;
 using PMS.Domain.Constants;
 using PMS.Domain.Entities;
@@ -13,9 +14,17 @@ public class ChatServiceTests
 {
     private const string ChatPerms = """{"chat-view":true,"chat-post":true}""";
 
+    /// <summary>In-memory stand-in for Azure Blob Storage, not exercised by these tests directly.</summary>
+    private sealed class FakeBlobStorageService : IBlobStorageService
+    {
+        public Task<string> UploadAsync(string blobPath, byte[] content, string contentType, CancellationToken ct = default)
+            => Task.FromResult(blobPath);
+        public string GetReadSasUrl(string blobPath, TimeSpan validFor) => blobPath;
+    }
+
     // A fresh service (with its own access scope) per caller, like one request per user.
     private static ChatService As(ApplicationDbContext db) =>
-        new(NullLogger<ChatService>.Instance, db, new AccessScope(db));
+        new(NullLogger<ChatService>.Instance, db, new AccessScope(db), new FakeBlobStorageService());
 
     private sealed class Room : IDisposable
     {
@@ -267,7 +276,7 @@ public class ChatServiceTests
     {
         using var sql = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlServer("Server=localhost;Database=never_connected;Trusted_Connection=True;").Options);
-        var service = new ChatService(NullLogger<ChatService>.Instance, sql, new AccessScope(sql));
+        var service = new ChatService(NullLogger<ChatService>.Instance, sql, new AccessScope(sql), new FakeBlobStorageService());
 
         var text = service.BuildUnreadQuery(7, admin).ToQueryString();
 

@@ -30,4 +30,8 @@ public interface IChatService
 
     /// <summary>Unread counts for every project room the user can enter (others' messages only).</summary>
     Task<IReadOnlyList<ChatUnreadDto>> GetUnreadAsync(int userId);
+
+    /// <summary>Every room the user can enter, with its latest message preview and unread count -
+    /// the left-hand conversation list for the global chat inbox. Newest activity first.</summary>
+    Task<IReadOnlyList<ChatRoomDto>> GetRoomsAsync(int userId);
 }

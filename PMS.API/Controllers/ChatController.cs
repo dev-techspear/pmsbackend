@@ -96,10 +96,10 @@ public class ChatController : BaseController
         var file = await _chat.GetAttachmentAsync(projectId, attachmentId, Me);
         if (file == null) return NotFoundResult("File not found.");
 
-        // Never let the browser guess a type or render an uploaded file as a page.
-        Response.Headers["X-Content-Type-Options"] = "nosniff";
-        Response.Headers["Cache-Control"] = "private, no-store";
-        return File(file.Content, file.ContentType, file.FileName);
+        // The access check already ran inside GetAttachmentAsync; this SAS URL is read-only and
+        // expires in minutes, so handing the browser straight to Blob Storage is safe - the API
+        // itself never streams attachment bytes.
+        return Redirect(file.Url);
     }
 
     [HttpPut("projects/{projectId:int}/chat/messages/{messageId:int}")]
@@ -136,4 +136,9 @@ public class ChatController : BaseController
 
     [HttpGet("chat/unread")]
     public async Task<IActionResult> Unread() => OkResult(await _chat.GetUnreadAsync(Me));
+
+    /// <summary>The global chat inbox's left-hand conversation list - every room the user can
+    /// enter, newest activity first.</summary>
+    [HttpGet("chat/rooms")]
+    public async Task<IActionResult> Rooms() => OkResult(await _chat.GetRoomsAsync(Me));
 }

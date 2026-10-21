@@ -14,11 +14,13 @@ public class ChatService : BaseService<ChatService>, IChatService
 {
     private readonly IApplicationDbContext _context;
     private readonly IAccessScope _scope;
+    private readonly IBlobStorageService _blobs;
 
-    public ChatService(ILogger<ChatService> logger, IApplicationDbContext context, IAccessScope scope) : base(logger)
+    public ChatService(ILogger<ChatService> logger, IApplicationDbContext context, IAccessScope scope, IBlobStorageService blobs) : base(logger)
     {
         _context = context;
         _scope = scope;
+        _blobs = blobs;
     }
 
     private async Task EnsureScopeAsync(int userId)
@@ -201,9 +203,14 @@ public class ChatService : BaseService<ChatService>, IChatService
             await RequireAccessAsync(projectId, userId);
             var file = await _context.ChatAttachments
                 .Where(a => a.Id == attachmentId && a.Message.ProjectId == projectId && !a.Message.IsDeleted)
-                .Select(a => new ChatDownload(a.FileName, a.ContentType, a.Content))
+                .Select(a => new { a.FileName, a.ContentType, a.BlobPath })
                 .FirstOrDefaultAsync();
-            return file;
+            if (file == null) return null;
+
+            // Minted only after the access check above passes; short-lived so it's safe to hand
+            // straight to the browser even though it bypasses the API for the actual download.
+            var url = _blobs.GetReadSasUrl(file.BlobPath, TimeSpan.FromMinutes(AppConstants.ChatAttachmentSasMinutes));
+            return new ChatDownload(file.FileName, file.ContentType, url);
         }, nameof(GetAttachmentAsync));
     }
 
@@ -240,9 +247,13 @@ public class ChatService : BaseService<ChatService>, IChatService
             _context.ChatMessages.Add(message);
             foreach (var (name, mime, content) in uploads)
             {
+                // A GUID blob path - never the raw filename - keeps the container free of
+                // path-traversal/collision concerns; the real name is kept in FileName for display.
+                var blobPath = $"{projectId}/{Guid.NewGuid()}{Path.GetExtension(name)}";
+                await _blobs.UploadAsync(blobPath, content, mime);
                 _context.ChatAttachments.Add(new ChatAttachment
                 {
-                    Message = message, FileName = name, ContentType = mime, Size = content.Length, Content = content,
+                    Message = message, FileName = name, ContentType = mime, Size = content.Length, BlobPath = blobPath,
                 });
             }
             foreach (var id in mentionedIds) _context.ChatMentions.Add(new ChatMention { Message = message, UserId = id });
@@ -358,5 +369,61 @@ public class ChatService : BaseService<ChatService>, IChatService
             var counts = await BuildUnreadQuery(userId, _scope.IsAdmin).ToListAsync();
             return (IReadOnlyList<ChatUnreadDto>)counts;
         }, nameof(GetUnreadAsync));
+    }
+
+    public async Task<IReadOnlyList<ChatRoomDto>> GetRoomsAsync(int userId)
+    {
+        return await ExecuteAsync(async () =>
+        {
+            await EnsureScopeAsync(userId);
+            if (!RoleAllows(AppConstants.PermChatView)) return (IReadOnlyList<ChatRoomDto>)new List<ChatRoomDto>();
+
+            IQueryable<Project> rooms = _scope.IsAdmin ? _context.Projects : TiedTo(_context.Projects, userId);
+
+            // A correlated subquery per room (translates to CROSS APPLY), not a GroupBy - far more
+            // reliably translatable, and there are only as many rooms as this user has.
+            var roomRows = await rooms
+                .Select(p => new
+                {
+                    p.Id,
+                    p.ProjectName,
+                    Last = _context.ChatMessages
+                        .Where(m => m.ProjectId == p.Id && !m.IsDeleted)
+                        .OrderByDescending(m => m.Id)
+                        .Select(m => new
+                        {
+                            m.Id,
+                            m.Body,
+                            m.CreatedAt,
+                            SenderName = m.Sender == null ? "Deleted user" : (m.Sender.DisplayName ?? m.Sender.FirstName + " " + m.Sender.LastName),
+                        })
+                        .FirstOrDefault(),
+                })
+                .ToListAsync();
+
+            var lastMessageIds = roomRows.Where(r => r.Last != null).Select(r => r.Last!.Id).ToList();
+            var withAttachments = (await _context.ChatAttachments
+                .Where(a => lastMessageIds.Contains(a.MessageId))
+                .Select(a => a.MessageId)
+                .Distinct()
+                .ToListAsync())
+                .ToHashSet();
+
+            var unreadByProject = (await BuildUnreadQuery(userId, _scope.IsAdmin).ToListAsync())
+                .ToDictionary(u => u.ProjectId);
+
+            return (IReadOnlyList<ChatRoomDto>)roomRows
+                .Select(r =>
+                {
+                    unreadByProject.TryGetValue(r.Id, out var unread);
+                    return new ChatRoomDto(
+                        r.Id, r.ProjectName,
+                        r.Last?.Body, r.Last?.SenderName, r.Last?.CreatedAt,
+                        r.Last != null && withAttachments.Contains(r.Last.Id),
+                        unread?.Count ?? 0, unread?.MentionCount ?? 0);
+                })
+                .OrderByDescending(r => r.LastMessageAt ?? DateTime.MinValue)
+                .ToList();
+        }, nameof(GetRoomsAsync));
     }
 }

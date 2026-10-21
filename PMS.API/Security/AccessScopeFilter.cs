@@ -103,10 +103,18 @@ public static class ExternalPermissionMap
         // Lookup data (statuses, priorities, roles list ...) feeds every dropdown; read-only.
         if (controller.Equals("Masters", StringComparison.OrdinalIgnoreCase)) return isRead ? Allowed : null;
 
-        // The user's own profile only - not the directory of everyone else.
+        // Own profile is always readable; the directory itself needs user-view/-create/-edit/-delete
+        // (granted per role like any other permission), and syncing from Azure AD is an admin-only
+        // automation action, not something user-view should ever unlock.
         if (controller.Equals("Users", StringComparison.OrdinalIgnoreCase))
         {
-            return isRead && path.TrimEnd('/').EndsWith("/users/me", StringComparison.OrdinalIgnoreCase) ? Allowed : null;
+            var trimmed = path.TrimEnd('/');
+            if (isRead && trimmed.EndsWith("/users/me", StringComparison.OrdinalIgnoreCase)) return Allowed;
+            if (trimmed.EndsWith("/users/sync", StringComparison.OrdinalIgnoreCase)) return AppConstants.PermAutomationManage;
+            if (isRead) return AppConstants.PermUserView;
+            if (HttpMethods.IsPost(method)) return AppConstants.PermUserCreate;
+            if (HttpMethods.IsDelete(method)) return AppConstants.PermUserDelete;
+            return AppConstants.PermUserEdit;
         }
 
         // Project chat: reading (and marking read) needs chat-view, writing needs chat-post.

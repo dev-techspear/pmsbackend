@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PMS.Application.Common;
+using PMS.Application.Common.Interfaces;
 using PMS.Application.DTOs;
 using PMS.Application.Services.Implementations;
 using PMS.Domain.Constants;
@@ -14,8 +15,24 @@ public class ChatAttachmentTests
 {
     private const string ChatPerms = """{"chat-view":true,"chat-post":true}""";
 
+    // Keyed by db instance so every As(r.Db) call in a test shares the same in-memory "container".
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ApplicationDbContext, FakeBlobStorageService> BlobStores = new();
+
     private static ChatService As(ApplicationDbContext db) =>
-        new(NullLogger<ChatService>.Instance, db, new AccessScope(db));
+        new(NullLogger<ChatService>.Instance, db, new AccessScope(db), BlobStores.GetOrCreateValue(db));
+
+    /// <summary>In-memory stand-in for Azure Blob Storage - "SAS URL" is just the blob path, since
+    /// these tests only need to prove the right bytes landed under the path a download resolves.</summary>
+    private sealed class FakeBlobStorageService : IBlobStorageService
+    {
+        public readonly Dictionary<string, byte[]> Store = new();
+        public Task<string> UploadAsync(string blobPath, byte[] content, string contentType, CancellationToken ct = default)
+        {
+            Store[blobPath] = content;
+            return Task.FromResult(blobPath);
+        }
+        public string GetReadSasUrl(string blobPath, TimeSpan validFor) => blobPath;
+    }
 
     // The first bytes real files start with.
     private static byte[] Png(int extra = 16) => new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }.Concat(new byte[extra]).ToArray();
@@ -91,7 +108,7 @@ public class ChatAttachmentTests
 
         var file = await As(r.Db).GetAttachmentAsync(r.Project.Id, msg.Attachments[0].Id, r.Freelancer.Id);
         Assert.NotNull(file);
-        Assert.Equal(Pdf(), file!.Content);
+        Assert.Equal(Pdf(), BlobStores.GetOrCreateValue(r.Db).Store[file!.Url]);
         Assert.Equal("a.pdf", file.FileName);
     }
 
