@@ -17,6 +17,7 @@ namespace PMS.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("pms")
                 .HasAnnotation("ProductVersion", "9.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -34,7 +35,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("IssueId");
 
-                    b.ToTable("issue_followers", (string)null);
+                    b.ToTable("issue_followers", "pms");
                 });
 
             modelBuilder.Entity("IssueUser1", b =>
@@ -49,7 +50,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("Issue1Id");
 
-                    b.ToTable("issue_assignees", (string)null);
+                    b.ToTable("issue_assignees", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.AuditFieldsMapping", b =>
@@ -82,7 +83,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("AuditFieldsMapping", (string)null);
+                    b.ToTable("AuditFieldsMapping", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.AuditLogDetails", b =>
@@ -113,7 +114,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("AuditLogId");
 
-                    b.ToTable("AuditLogDetails");
+                    b.ToTable("AuditLogDetails", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.AuditLogs", b =>
@@ -151,7 +152,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.AuditMetaDataInfo", b =>
@@ -179,7 +180,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AuditMetaDataInfo", (string)null);
+                    b.ToTable("AuditMetaDataInfo", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ChatAttachment", b =>
@@ -217,7 +218,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("chat_attachments");
+                    b.ToTable("chat_attachments", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ChatMention", b =>
@@ -241,7 +242,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("MessageId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("chat_mentions");
+                    b.ToTable("chat_mentions", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ChatMessage", b =>
@@ -284,7 +285,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("ProjectId", "Id");
 
-                    b.ToTable("chat_messages");
+                    b.ToTable("chat_messages", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ChatReadState", b =>
@@ -314,7 +315,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("ProjectId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("chat_read_states");
+                    b.ToTable("chat_read_states", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Document", b =>
@@ -370,7 +371,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("UploadedByEmail");
 
-                    b.ToTable("documents");
+                    b.ToTable("documents", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Issue", b =>
@@ -490,7 +491,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("StatusId");
 
-                    b.ToTable("issues");
+                    b.ToTable("issues", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.MasterLookup", b =>
@@ -539,7 +540,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("Category", "Value")
                         .IsUnique();
 
-                    b.ToTable("master_lookups");
+                    b.ToTable("master_lookups", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Milestone", b =>
@@ -621,7 +622,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("StatusId");
 
-                    b.ToTable("milestones");
+                    b.ToTable("milestones", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Project", b =>
@@ -768,7 +769,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("TemplateId");
 
-                    b.ToTable("projects");
+                    b.ToTable("projects", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ProjectGroup", b =>
@@ -803,7 +804,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("project_groups");
+                    b.ToTable("project_groups", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ProjectMember", b =>
@@ -849,7 +850,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("project_members");
+                    b.ToTable("project_members", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ProjectTemplate", b =>
@@ -903,7 +904,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("SourceProjectId");
 
-                    b.ToTable("project_templates");
+                    b.ToTable("project_templates", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Role", b =>
@@ -942,7 +943,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("roles");
+                    b.ToTable("roles", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Skill", b =>
@@ -974,7 +975,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("skills");
+                    b.ToTable("skills", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Task", b =>
@@ -1100,7 +1101,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("TaskListId");
 
-                    b.ToTable("tasks");
+                    b.ToTable("tasks", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.TaskList", b =>
@@ -1142,7 +1143,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("ProjectId");
 
-                    b.ToTable("task_lists");
+                    b.ToTable("task_lists", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Team", b =>
@@ -1209,7 +1210,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("TeamEmail")
                         .IsUnique();
 
-                    b.ToTable("teams");
+                    b.ToTable("teams", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.TemplateTask", b =>
@@ -1251,7 +1252,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("TemplateId", "Title")
                         .IsUnique();
 
-                    b.ToTable("template_tasks");
+                    b.ToTable("template_tasks", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.TimeLog", b =>
@@ -1345,7 +1346,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("timelogs");
+                    b.ToTable("timelogs", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Timesheet", b =>
@@ -1403,7 +1404,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("UserEmail");
 
-                    b.ToTable("timesheets");
+                    b.ToTable("timesheets", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.User", b =>
@@ -1521,7 +1522,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("users");
+                    b.ToTable("users", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.UserStatus", b =>
@@ -1553,7 +1554,7 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("user_statuses");
+                    b.ToTable("user_statuses", "pms");
                 });
 
             modelBuilder.Entity("SkillUser", b =>
@@ -1568,7 +1569,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("UsersId");
 
-                    b.ToTable("user_skill_link", (string)null);
+                    b.ToTable("user_skill_link", "pms");
                 });
 
             modelBuilder.Entity("TaskUser", b =>
@@ -1583,7 +1584,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("TaskId");
 
-                    b.ToTable("task_owners", (string)null);
+                    b.ToTable("task_owners", "pms");
                 });
 
             modelBuilder.Entity("TaskUser1", b =>
@@ -1598,7 +1599,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("Task1Id");
 
-                    b.ToTable("task_assignees", (string)null);
+                    b.ToTable("task_assignees", "pms");
                 });
 
             modelBuilder.Entity("TeamUser", b =>
@@ -1613,7 +1614,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("TeamsId");
 
-                    b.ToTable("user_team_link", (string)null);
+                    b.ToTable("user_team_link", "pms");
                 });
 
             modelBuilder.Entity("issue_document_link", b =>
@@ -1628,7 +1629,7 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("IssuesId");
 
-                    b.ToTable("issue_document_link", (string)null);
+                    b.ToTable("issue_document_link", "pms");
                 });
 
             modelBuilder.Entity("IssueUser", b =>

@@ -2,6 +2,9 @@ namespace PMS.Domain.Constants;
 
 public static class AppConstants
 {
+    /// <summary>SQL Server schema that owns every PMS table in the shared techspear database.</summary>
+    public const string PmsSchema = "pms";
+
     public const string RoleAdmin = "Admin";
     public const string RoleEmployee = "Employee";
     public const string RoleFreelancer = "Freelancer";

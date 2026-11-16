@@ -13,7 +13,9 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString, b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+            options.UseSqlServer(connectionString, b => b
+                .MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)
+                .MigrationsHistoryTable("__EFMigrationsHistory", PMS.Domain.Constants.AppConstants.PmsSchema)));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddScoped<ITokenService, PMS.Infrastructure.Services.TokenService>();

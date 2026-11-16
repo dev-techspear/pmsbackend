@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PMS.Domain.Entities;
 using Task = PMS.Domain.Entities.Task;
 using PMS.Application.Common.Interfaces;
@@ -41,6 +41,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Shared techspear DB: each module owns a schema.
+        modelBuilder.HasDefaultSchema(PMS.Domain.Constants.AppConstants.PmsSchema);
 
         // Apply Global Query Filter for Soft Delete (IsDeleted == false)
         modelBuilder.Entity<User>().HasQueryFilter(x => !x.IsDeleted);
