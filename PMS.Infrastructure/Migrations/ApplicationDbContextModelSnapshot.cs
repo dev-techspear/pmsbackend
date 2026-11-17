@@ -18,7 +18,7 @@ namespace PMS.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("pms")
-                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -326,6 +326,10 @@ namespace PMS.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("BlobPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -355,6 +359,9 @@ namespace PMS.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("RestrictAccess")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -372,6 +379,36 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("UploadedByEmail");
 
                     b.ToTable("documents", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.DocumentRoleAccess", b =>
+                {
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DocumentId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("document_role_accesses", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.DocumentUserAccess", b =>
+                {
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DocumentId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("document_user_accesses", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Issue", b =>
@@ -770,6 +807,132 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("TemplateId");
 
                     b.ToTable("projects", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectCredential", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CredentialType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Host")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("LastRotatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RestrictAccess")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SecretEncrypted")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("project_credentials", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectCredentialAccessLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CredentialId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CredentialId");
+
+                    b.ToTable("project_credential_access_logs", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectCredentialRoleAccess", b =>
+                {
+                    b.Property<int>("CredentialId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CredentialId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("project_credential_role_accesses", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectCredentialUserAccess", b =>
+                {
+                    b.Property<int>("CredentialId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CredentialId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("project_credential_user_accesses", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ProjectGroup", b =>
@@ -1759,6 +1922,44 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("UploadedBy");
                 });
 
+            modelBuilder.Entity("PMS.Domain.Entities.DocumentRoleAccess", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.Document", "Document")
+                        .WithMany("RoleAccess")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.DocumentUserAccess", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.Document", "Document")
+                        .WithMany("UserAccess")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PMS.Domain.Entities.Issue", b =>
                 {
                     b.HasOne("PMS.Domain.Entities.User", "Assignee")
@@ -1918,6 +2119,63 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("ProjectManager");
 
                     b.Navigation("StatusMaster");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectCredential", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectCredentialRoleAccess", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.ProjectCredential", "Credential")
+                        .WithMany("RoleAccess")
+                        .HasForeignKey("CredentialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Credential");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectCredentialUserAccess", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.ProjectCredential", "Credential")
+                        .WithMany("UserAccess")
+                        .HasForeignKey("CredentialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Credential");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ProjectMember", b =>
@@ -2268,6 +2526,13 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("Details");
                 });
 
+            modelBuilder.Entity("PMS.Domain.Entities.Document", b =>
+                {
+                    b.Navigation("RoleAccess");
+
+                    b.Navigation("UserAccess");
+                });
+
             modelBuilder.Entity("PMS.Domain.Entities.Milestone", b =>
                 {
                     b.Navigation("Issues");
@@ -2290,6 +2555,13 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("TeamMembers");
 
                     b.Navigation("Timelogs");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectCredential", b =>
+                {
+                    b.Navigation("RoleAccess");
+
+                    b.Navigation("UserAccess");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ProjectTemplate", b =>

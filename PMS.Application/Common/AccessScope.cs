@@ -18,6 +18,7 @@ public sealed class AccessScope : IAccessScope
     public bool IsLoaded { get; private set; }
     public int? UserId { get; private set; }
     public string? Email { get; private set; }
+    public int? RoleId { get; private set; }
     public bool IsAdmin { get; private set; }
     public bool IsExternal { get; private set; }
 
@@ -34,6 +35,7 @@ public sealed class AccessScope : IAccessScope
         if (user == null) return;
 
         Email = user.Email;
+        RoleId = user.RoleId;
         IsExternal = user.IsExternal;
         IsAdmin = string.Equals(user.Role?.Name, AppConstants.RoleAdmin, StringComparison.OrdinalIgnoreCase);
 

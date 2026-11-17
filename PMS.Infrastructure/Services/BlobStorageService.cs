@@ -45,7 +45,7 @@ public class BlobStorageService : IBlobStorageService
         return blobPath;
     }
 
-    public string GetReadSasUrl(string blobPath, TimeSpan validFor)
+    public string GetReadSasUrl(string blobPath, TimeSpan validFor, string? downloadFileName = null)
     {
         var container = _container.Value;
         var blob = container.GetBlobClient(blobPath);
@@ -56,6 +56,8 @@ public class BlobStorageService : IBlobStorageService
             Resource = "b",
             ExpiresOn = DateTimeOffset.UtcNow.Add(validFor),
         };
+        if (!string.IsNullOrEmpty(downloadFileName))
+            builder.ContentDisposition = $"attachment; filename=\"{downloadFileName.Replace("\"", "_")}\"";
         builder.SetPermissions(BlobSasPermissions.Read);
         return blob.GenerateSasUri(builder).ToString();
     }

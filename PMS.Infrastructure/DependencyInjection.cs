@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, PMS.Infrastructure.Services.TokenService>();
         services.AddSingleton<IPasswordHasher, PMS.Infrastructure.Services.PasswordHasher>();
         services.AddSingleton<IBlobStorageService, PMS.Infrastructure.Services.BlobStorageService>();
+        services.AddSingleton<ICredentialProtector, PMS.Infrastructure.Services.AesGcmCredentialProtector>();
 
         return services;
     }

@@ -54,6 +54,26 @@ public static class AppConstants
     public const int ChatMaxBodyLength = 4000;
     public const int ChatDefaultPageSize = 50;
     public const int ChatMaxPageSize = 100;
+    // Project documents (uploaded to blob storage under DocumentBlobPrefix, one shared container)
+    public const string DocumentBlobPrefix = "pms/documents";
+    public const int DocumentMaxBytes = 25 * 1024 * 1024;
+    public const int DocumentSasMinutes = 10;
+    public static readonly string[] DocumentAllowedExtensions =
+    [
+        ".png", ".jpg", ".jpeg", ".gif", ".webp",
+        ".pdf", ".txt", ".csv", ".md", ".json",
+        ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip",
+    ];
+
+    // Project credentials
+    public static readonly string[] CredentialTypes = ["Server", "Database", "ApiKey", "Git", "Cloud", "Application", "Other"];
+    public const string CredentialActionReveal = "REVEAL";
+    public const string CredentialActionCreate = "CREATE";
+    public const string CredentialActionRotate = "ROTATE";
+    public const string CredentialRevealRateLimitPolicy = "credential-reveal";
+    public const int CredentialRevealRateLimitPermits = 20;
+    public const int CredentialRevealRateLimitWindowMinutes = 1;
+
     // Attachments
     public const int ChatMaxAttachments = 5;
     public const int ChatMaxAttachmentBytes = 10 * 1024 * 1024;

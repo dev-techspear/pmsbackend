@@ -127,6 +127,15 @@ public static class ExternalPermissionMap
                 : AppConstants.PermChatPost;
         }
 
+        // Project credentials: seeing the list or revealing a secret needs proj-view (the per-credential
+        // sharing rules then decide which ones); storing, rotating or deleting needs proj-edit.
+        if (controller.Equals("Credentials", StringComparison.OrdinalIgnoreCase))
+        {
+            return isRead || path.TrimEnd('/').EndsWith("/reveal", StringComparison.OrdinalIgnoreCase)
+                ? AppConstants.PermProjectView
+                : AppConstants.PermProjectEdit;
+        }
+
         if (!Prefix.TryGetValue(controller, out var prefix)) return null;
 
         var action =

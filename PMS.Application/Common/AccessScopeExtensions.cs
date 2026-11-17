@@ -75,11 +75,44 @@ public static class AccessScopeExtensions
         return q.Where(ts => ts.UserEmail == email);
     }
 
+    /// <summary>
+    /// Two independent gates: (1) SharePoint-style sharing - a restricted document is visible only
+    /// to its uploader, Admins, the roles/users it was shared with; (2) the usual project scope.
+    /// Both must pass, so being in a shared role never exposes a project the user cannot see.
+    /// </summary>
     public static IQueryable<Document> ScopeDocuments(this IQueryable<Document> q, IAccessScope s)
     {
+        if (!s.IsAdmin)
+        {
+            if (!s.IsLoaded || s.UserId is not int sharedUid)
+            {
+                q = q.Where(d => !d.RestrictAccess);
+            }
+            else
+            {
+                var email = s.Email;
+                var roleId = s.RoleId;
+                q = q.Where(d => !d.RestrictAccess
+                                 || (email != null && d.UploadedByEmail == email)
+                                 || (roleId != null && d.RoleAccess.Any(r => r.RoleId == roleId))
+                                 || d.UserAccess.Any(u => u.UserId == sharedUid));
+            }
+        }
         if (!s.IsRestricted(AppConstants.PermProjectView) || s.UserId is not int uid) return q;
         return q.Where(d => d.Project.OwnerId == uid || d.Project.ProjectManagerId == uid
                             || d.Project.DeliveryHeadId == uid || d.Project.TeamMembers.Any(m => m.UserId == uid));
+    }
+
+    /// <summary>Same sharing model as documents; the project gate is applied by the caller.</summary>
+    public static IQueryable<ProjectCredential> ScopeCredentials(this IQueryable<ProjectCredential> q, IAccessScope s)
+    {
+        if (s.IsAdmin) return q;
+        if (!s.IsLoaded || s.UserId is not int uid) return q.Where(_ => false);
+        var roleId = s.RoleId;
+        return q.Where(c => !c.RestrictAccess
+                            || c.CreatedByUserId == uid
+                            || (roleId != null && c.RoleAccess.Any(r => r.RoleId == roleId))
+                            || c.UserAccess.Any(u => u.UserId == uid));
     }
 
     /// <summary>

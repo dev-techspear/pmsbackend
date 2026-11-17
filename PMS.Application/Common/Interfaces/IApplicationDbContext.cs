@@ -21,6 +21,12 @@ public interface IApplicationDbContext
     DbSet<TimeLog> Timelogs { get; }
     DbSet<Timesheet> Timesheets { get; }
     DbSet<Document> Documents { get; }
+    DbSet<DocumentRoleAccess> DocumentRoleAccesses { get; }
+    DbSet<DocumentUserAccess> DocumentUserAccesses { get; }
+    DbSet<ProjectCredential> ProjectCredentials { get; }
+    DbSet<ProjectCredentialRoleAccess> ProjectCredentialRoleAccesses { get; }
+    DbSet<ProjectCredentialUserAccess> ProjectCredentialUserAccesses { get; }
+    DbSet<ProjectCredentialAccessLog> ProjectCredentialAccessLogs { get; }
     DbSet<ChatMessage> ChatMessages { get; }
     DbSet<ChatReadState> ChatReadStates { get; }
     DbSet<ChatMention> ChatMentions { get; }

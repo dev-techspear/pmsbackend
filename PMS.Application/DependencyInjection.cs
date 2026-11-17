@@ -25,6 +25,8 @@ public static class DependencyInjection
         services.AddScoped<ITimeLogService, TimeLogService>();
         services.AddScoped<ITimesheetService, TimesheetService>();
         services.AddScoped<IDocumentService, DocumentService>();
+        services.AddScoped<IDocumentFileService, DocumentFileService>();
+        services.AddScoped<ICredentialService, CredentialService>();
         services.AddScoped<IProjectGroupService, ProjectGroupService>();
         services.AddScoped<IProjectTemplateService, ProjectTemplateService>();
         services.AddScoped<IAuditService, AuditService>();

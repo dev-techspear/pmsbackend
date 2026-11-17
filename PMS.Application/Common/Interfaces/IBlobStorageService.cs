@@ -11,5 +11,5 @@ public interface IBlobStorageService
     Task<string> UploadAsync(string blobPath, byte[] content, string contentType, CancellationToken ct = default);
 
     /// <summary>A read-only URL for the blob that expires after <paramref name="validFor"/>.</summary>
-    string GetReadSasUrl(string blobPath, TimeSpan validFor);
+    string GetReadSasUrl(string blobPath, TimeSpan validFor, string? downloadFileName = null);
 }

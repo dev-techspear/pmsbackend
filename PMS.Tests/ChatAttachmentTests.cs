@@ -31,7 +31,7 @@ public class ChatAttachmentTests
             Store[blobPath] = content;
             return Task.FromResult(blobPath);
         }
-        public string GetReadSasUrl(string blobPath, TimeSpan validFor) => blobPath;
+        public string GetReadSasUrl(string blobPath, TimeSpan validFor, string? downloadFileName = null) => blobPath;
     }
 
     // The first bytes real files start with.

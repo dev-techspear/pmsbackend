@@ -109,6 +109,7 @@ public class DocumentService : BaseService<DocumentService>, IDocumentService
         _scope = scope;
     }
 
+    // Link-only documents (no file upload). Real uploads go through DocumentFileService.
     public async Task<DocumentResponse> CreateDocumentAsync(CreateDocumentRequest request, string actorId)
     {
         return await ExecuteAsync(async () =>
@@ -124,11 +125,12 @@ public class DocumentService : BaseService<DocumentService>, IDocumentService
                 FileType = request.FileType,
                 FileSize = request.FileSize,
                 ProjectId = request.ProjectId,
-                UploadedByEmail = request.UploadedByEmail,
+                // Taken from the authenticated user, not the request body (it decides who may manage it).
+                UploadedByEmail = _scope.Email ?? request.UploadedByEmail,
             };
             _context.Documents.Add(document);
             await _context.SaveChangesAsync();
-            return MapToResponse(document);
+            return MapToResponse(document, _scope);
         }, nameof(CreateDocumentAsync));
     }
 
@@ -136,10 +138,11 @@ public class DocumentService : BaseService<DocumentService>, IDocumentService
     {
         return await ExecuteAsync(async () =>
         {
-            var queryable = _context.Documents.ScopeDocuments(_scope).AsQueryable();
+            var queryable = _context.Documents.ScopeDocuments(_scope)
+                .Include(d => d.RoleAccess).Include(d => d.UserAccess).AsQueryable();
             if (projectId.HasValue) queryable = queryable.Where(d => d.ProjectId == projectId);
             var items = await queryable.OrderByDescending(d => d.Id).ToListAsync();
-            return items.Select(MapToResponse);
+            return items.Select(d => MapToResponse(d, _scope));
         }, nameof(GetDocumentsAsync));
     }
 
@@ -147,8 +150,10 @@ public class DocumentService : BaseService<DocumentService>, IDocumentService
     {
         return await ExecuteAsync(async () =>
         {
-            var document = await _context.Documents.ScopeDocuments(_scope).FirstOrDefaultAsync(d => d.Id == documentId);
-            return document == null ? null : MapToResponse(document);
+            var document = await _context.Documents.ScopeDocuments(_scope)
+                .Include(d => d.RoleAccess).Include(d => d.UserAccess)
+                .FirstOrDefaultAsync(d => d.Id == documentId);
+            return document == null ? null : MapToResponse(document, _scope);
         }, nameof(GetDocumentByIdAsync));
     }
 
@@ -156,14 +161,18 @@ public class DocumentService : BaseService<DocumentService>, IDocumentService
     {
         return await ExecuteAsync(async () =>
         {
-            var document = await _context.Documents.ScopeDocuments(_scope).FirstOrDefaultAsync(d => d.Id == documentId);
+            var document = await _context.Documents.ScopeDocuments(_scope)
+                .Include(d => d.RoleAccess).Include(d => d.UserAccess)
+                .FirstOrDefaultAsync(d => d.Id == documentId);
             if (document == null) return null;
+            if (!CanManage(document, _scope))
+                throw new AccessDeniedException("Only the uploader or an Admin can edit this document.");
 
             if (request.Title != null) document.Title = request.Title;
             if (request.Description != null) document.Description = request.Description;
 
             await _context.SaveChangesAsync();
-            return MapToResponse(document);
+            return MapToResponse(document, _scope);
         }, nameof(UpdateDocumentAsync));
     }
 
@@ -173,15 +182,27 @@ public class DocumentService : BaseService<DocumentService>, IDocumentService
         {
             var document = await _context.Documents.ScopeDocuments(_scope).FirstOrDefaultAsync(d => d.Id == documentId);
             if (document == null) return false;
+            if (!CanManage(document, _scope))
+                throw new AccessDeniedException("Only the uploader or an Admin can delete this document.");
             document.IsDeleted = true;
             await _context.SaveChangesAsync();
             return true;
         }, nameof(DeleteDocumentAsync));
     }
 
-    private static DocumentResponse MapToResponse(Document d) => new(
-        d.Id, d.PublicId, d.Title, d.Description, d.FileUrl, d.FileType, d.FileSize,
-        d.ProjectId, d.UploadedByEmail, d.CreatedAt, d.UpdatedAt
+    // Documents without an uploader (legacy rows) stay manageable as before; otherwise uploader or Admin.
+    internal static bool CanManage(Document d, IAccessScope s)
+        => s.IsAdmin || d.UploadedByEmail == null || string.Equals(d.UploadedByEmail, s.Email, StringComparison.OrdinalIgnoreCase);
+
+    internal static DocumentResponse MapToResponse(Document d, IAccessScope s) => new(
+        d.Id, d.PublicId, d.Title, d.Description,
+        // The blob path is internal: uploaded files are reached only through the checked download endpoint.
+        d.BlobPath != null ? $"/api/v1/documents/{d.Id}/download" : d.FileUrl,
+        d.FileType, d.FileSize,
+        d.ProjectId, d.UploadedByEmail, d.CreatedAt, d.UpdatedAt,
+        d.BlobPath != null, d.RestrictAccess,
+        d.RoleAccess.Select(r => r.RoleId).ToList(), d.UserAccess.Select(u => u.UserId).ToList(),
+        CanManage(d, s)
     );
 }
 

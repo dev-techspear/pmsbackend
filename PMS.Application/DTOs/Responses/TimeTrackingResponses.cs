@@ -52,7 +52,12 @@ public record DocumentResponse(
     int ProjectId,
     string? UploadedByEmail,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    bool HasFile = false,
+    bool RestrictAccess = false,
+    IReadOnlyList<int>? SharedRoleIds = null,
+    IReadOnlyList<int>? SharedUserIds = null,
+    bool CanManage = false
 );
 
 public record ProjectGroupResponse(

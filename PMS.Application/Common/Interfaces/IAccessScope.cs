@@ -10,6 +10,7 @@ public interface IAccessScope
     bool IsLoaded { get; }
     int? UserId { get; }
     string? Email { get; }
+    int? RoleId { get; }
     bool IsAdmin { get; }
     bool IsExternal { get; }
 

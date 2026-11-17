@@ -19,7 +19,7 @@ public class ChatServiceTests
     {
         public Task<string> UploadAsync(string blobPath, byte[] content, string contentType, CancellationToken ct = default)
             => Task.FromResult(blobPath);
-        public string GetReadSasUrl(string blobPath, TimeSpan validFor) => blobPath;
+        public string GetReadSasUrl(string blobPath, TimeSpan validFor, string? downloadFileName = null) => blobPath;
     }
 
     // A fresh service (with its own access scope) per caller, like one request per user.

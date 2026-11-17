@@ -223,6 +223,11 @@ public class AccessScopeTests
     [InlineData("Chat", "POST", "/api/v1/projects/3/chat/messages", "chat-post")]
     [InlineData("Chat", "PUT", "/api/v1/projects/3/chat/messages/8", "chat-post")]
     [InlineData("Chat", "DELETE", "/api/v1/projects/3/chat/messages/8", "chat-post")]
+    [InlineData("Credentials", "GET", "/api/v1/projects/3/credentials", "proj-view")]
+    [InlineData("Credentials", "POST", "/api/v1/projects/3/credentials/4/reveal", "proj-view")]
+    [InlineData("Credentials", "POST", "/api/v1/projects/3/credentials", "proj-edit")]
+    [InlineData("Credentials", "PUT", "/api/v1/projects/3/credentials/4", "proj-edit")]
+    [InlineData("Credentials", "DELETE", "/api/v1/projects/3/credentials/4", "proj-edit")]
     public void External_permission_map(string controller, string method, string path, string? expected)
     {
         Assert.Equal(expected, ExternalPermissionMap.RequiredPermission(controller, method, path));
@@ -240,7 +245,7 @@ public class AccessScopeTests
         var reachable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "Auth", "Masters", "Users", "Projects", "ProjectGroups", "ProjectTemplates", "Documents",
-            "Tasks", "TaskLists", "Issues", "Milestones", "TimeLogs", "Timesheets", "Teams", "Chat",
+            "Tasks", "TaskLists", "Issues", "Milestones", "TimeLogs", "Timesheets", "Teams", "Chat", "Credentials",
         };
         // Audit = system logs; Graph = searches the whole company directory (names/emails of every employee).
         var closed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Audit", "Graph" };

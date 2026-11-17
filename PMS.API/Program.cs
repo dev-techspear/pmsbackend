@@ -98,6 +98,17 @@ builder.Services.AddRateLimiter(options =>
 // 2c. Chat posting limit, per signed-in user (falls back to IP) - not one shared bucket.
 builder.Services.AddRateLimiter(options =>
 {
+    // Revealing a stored secret: partitioned per user (never one global bucket).
+    options.AddPolicy(AppConstants.CredentialRevealRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = AppConstants.CredentialRevealRateLimitPermits,
+                Window = TimeSpan.FromMinutes(AppConstants.CredentialRevealRateLimitWindowMinutes),
+                QueueLimit = 0,
+            }));
     options.AddPolicy(AppConstants.ChatRateLimitPolicy, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
