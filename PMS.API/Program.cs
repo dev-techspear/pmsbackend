@@ -207,11 +207,30 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
     {
-        var origins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>() ?? new[] { "*" };
-        policy.WithOrigins(origins)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        var configuredOrigins = builder.Configuration.GetSection("CorsOrigins").Get<string[]>()
+            ?? builder.Configuration["CorsOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? Array.Empty<string>();
+
+        policy.SetIsOriginAllowed(origin =>
+        {
+            if (string.IsNullOrWhiteSpace(origin)) return false;
+            try
+            {
+                var uri = new Uri(origin);
+                return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.EndsWith("techspear.in", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.EndsWith("azurestaticapps.net", StringComparison.OrdinalIgnoreCase)
+                    || uri.Host.EndsWith("azurewebsites.net", StringComparison.OrdinalIgnoreCase)
+                    || configuredOrigins.Any(o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase));
+            }
+            catch
+            {
+                return false;
+            }
+        })
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
     });
 });
 

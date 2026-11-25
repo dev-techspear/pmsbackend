@@ -8,6 +8,7 @@ using PMS.Domain.Constants;
 namespace PMS.API.Controllers;
 
 [Route("api/v1/auth")]
+[Route("auth")]
 public class AuthController : BaseController
 {
     private readonly IAuthService _authService;
