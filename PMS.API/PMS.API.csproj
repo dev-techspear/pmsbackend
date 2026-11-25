@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PMS.Infrastructure\PMS.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\..\techspear-identity\techspear-identity-api\src\Techspear.Identity.Adapter\Techspear.Identity.Adapter.csproj" />
   </ItemGroup>
 
   <ItemGroup>
