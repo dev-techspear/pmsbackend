@@ -286,18 +286,19 @@ app.UseRateLimiter();
 app.MapControllers();
 app.MapHub<PMS.API.Hubs.ChatHub>("/hubs/chat");
 
-// Seed reference/lookup data (roles, statuses, master_lookups, skills) — idempotent, so
-// safe to run on every startup. See PMS.Infrastructure/Data/DbInitializer.cs.
+// Apply any pending EF Core migrations and seed reference/lookup data
+// (roles, statuses, master_lookups, skills) — idempotent, so safe to run on startup.
 try
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
     await DbInitializer.SeedAsync(db);
 }
 catch (Exception ex)
 {
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "Failed to seed database during startup: {Message}", ex.Message);
+    logger.LogError(ex, "Failed to migrate or seed database during startup: {Message}", ex.Message);
 }
 
 app.Run();
