@@ -65,11 +65,27 @@ public class AuthService : BaseService<AuthService>, IAuthService
             try
             {
                 tokenResponse = await _httpClient.PostAsync(tokenUrl, new FormUrlEncodedContent(tokenRequestParams));
-                tokenResponse.EnsureSuccessStatusCode();
+                if (!tokenResponse.IsSuccessStatusCode)
+                {
+                    var errorBody = await tokenResponse.Content.ReadAsStringAsync();
+                    try
+                    {
+                        var errJson = JsonNode.Parse(errorBody);
+                        var desc = errJson?["error_description"]?.ToString() ?? errJson?["error"]?.ToString();
+                        if (!string.IsNullOrEmpty(desc))
+                        {
+                            throw new InvalidOperationException($"Microsoft authentication failed: {desc}");
+                        }
+                    }
+                    catch (InvalidOperationException) { throw; }
+                    catch { }
+                    throw new InvalidOperationException($"Microsoft rejected the authorization code: {errorBody}");
+                }
             }
+            catch (InvalidOperationException) { throw; }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Microsoft rejected the authorization code or is unreachable: {ex.Message}");
+                throw new InvalidOperationException($"Microsoft token endpoint unreachable: {ex.Message}");
             }
 
             var tokenResponseStr = await tokenResponse.Content.ReadAsStringAsync();

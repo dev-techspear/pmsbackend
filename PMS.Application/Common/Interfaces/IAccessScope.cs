@@ -16,6 +16,9 @@ public interface IAccessScope
 
     Task LoadAsync(int userId);
 
+    /// <summary>Uses the Spear ID <c>perm</c> claim instead of the local role JSON. Levels stay All / O / A.</summary>
+    void ApplyTokenPermissions(int userId, string? email, string? roleName, bool isExternal, IEnumerable<string> permissions);
+
     /// <summary>"All", "O" (owned), "A" (associated) or null when the role has no such permission.</summary>
     string? Level(string permissionId);
 

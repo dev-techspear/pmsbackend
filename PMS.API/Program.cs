@@ -9,6 +9,7 @@ using PMS.Application;
 using PMS.Domain.Constants;
 using PMS.Infrastructure;
 using PMS.Infrastructure.Data;
+using Techspear.Identity.Adapter;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +37,68 @@ builder.Services.AddApplicationServices();
 const string QueryTokenItem = "token_from_query";
 var secretKey = builder.Configuration["SECRET_KEY"]
     ?? "0ad7e425b1d48f0cefc36120b071b4b8f078e7d0689b2b0a001b430f2626799a";
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services.AddScoped<PMS.API.Security.SpearIdUserLinker>();
+var hubIssuer = builder.Configuration["IdentityHub:Issuer"] ?? SpearIdTokens.DefaultIssuer;
+var hubKey = builder.Configuration["IdentityHub:SigningKey"];
+var hubAudience = builder.Configuration["IdentityHub:Audience"];
+var hubMode = builder.Configuration["IdentityHub:Mode"] ?? "Dual";
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = "PmsOrSpear";
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddPolicyScheme("PmsOrSpear", "PMS session or Spear ID", options =>
+    {
+        options.ForwardDefaultSelector = context =>
+        {
+            var header = context.Request.Headers.Authorization.ToString();
+            if (string.Equals(hubMode, "Hub", StringComparison.OrdinalIgnoreCase)
+                && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                return "SpearId";
+            }
+
+            if (!string.Equals(hubMode, "Legacy", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(hubKey)
+                && SpearIdTokens.IsHubBearer(header, hubIssuer))
+            {
+                return "SpearId";
+            }
+
+            return JwtBearerDefaults.AuthenticationScheme;
+        };
+    })
+    .AddJwtBearer("SpearId", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = hubIssuer,
+            ValidateAudience = !string.IsNullOrWhiteSpace(hubAudience),
+            ValidAudience = hubAudience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(string.IsNullOrWhiteSpace(hubKey) ? secretKey : hubKey)),
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var linker = context.HttpContext.RequestServices.GetRequiredService<PMS.API.Security.SpearIdUserLinker>();
+                var identity = SpearIdTokens.Read(context.Request.Headers.Authorization, hubKey ?? "", hubIssuer, hubAudience);
+                if (identity is null)
+                {
+                    context.Fail("Spear ID token was rejected.");
+                    return;
+                }
+
+                context.Principal = await linker.LinkAsync(identity, context.HttpContext.RequestAborted);
+                context.Success();
+            },
+        };
+    })
     .AddJwtBearer(options =>
     {
         // Browsers cannot set an Authorization header on a WebSocket, so SignalR sends the

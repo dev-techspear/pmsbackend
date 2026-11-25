@@ -83,6 +83,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .HasIndex(u => u.EmployeeId).IsUnique();
         modelBuilder.Entity<User>()
             .HasIndex(u => u.O365Id).IsUnique();
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.IdentityId).IsUnique();
 
         modelBuilder.Entity<Role>()
             .HasIndex(r => r.Name).IsUnique();

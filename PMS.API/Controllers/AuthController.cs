@@ -34,6 +34,10 @@ public class AuthController : BaseController
         {
             return ForbiddenResult(ex.Message);
         }
+        catch (Exception ex)
+        {
+            return BadRequestResult(ex.Message);
+        }
     }
 
     [HttpPost("login")]

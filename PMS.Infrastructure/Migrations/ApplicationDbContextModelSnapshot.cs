@@ -1602,6 +1602,9 @@ namespace PMS.Infrastructure.Migrations
                     b.Property<string>("Gender")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("IdentityId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1668,6 +1671,10 @@ namespace PMS.Infrastructure.Migrations
 
                     b.HasIndex("EmployeeId")
                         .IsUnique();
+
+                    b.HasIndex("IdentityId")
+                        .IsUnique()
+                        .HasFilter("[IdentityId] IS NOT NULL");
 
                     b.HasIndex("ManagerEmail");
 

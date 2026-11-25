@@ -31,7 +31,18 @@ public class AccessScopeFilter : IAsyncActionFilter
 
         if (!allowsAnonymous && int.TryParse(idClaim, out var userId))
         {
-            await _scope.LoadAsync(userId);
+            var tokenPermissions = TokenPermissions(context.HttpContext.User);
+            if (tokenPermissions is not null)
+            {
+                var roleName = context.HttpContext.User.FindFirstValue(ClaimTypes.Role);
+                var email = context.HttpContext.User.FindFirstValue(ClaimTypes.Email);
+                var external = string.Equals(context.HttpContext.User.FindFirstValue("utype"), "EXTERNAL", StringComparison.OrdinalIgnoreCase);
+                _scope.ApplyTokenPermissions(userId, email, roleName, external, tokenPermissions);
+            }
+            else
+            {
+                await _scope.LoadAsync(userId);
+            }
 
             if (_scope.IsExternal && !_scope.IsAdmin)
             {
@@ -55,6 +66,25 @@ public class AccessScopeFilter : IAsyncActionFilter
         }
 
         await next();
+    }
+
+    /// <summary>Null when this session was not issued by Spear ID, so the local role JSON still applies.</summary>
+    private static IReadOnlyList<string>? TokenPermissions(ClaimsPrincipal user)
+    {
+        var values = user.FindAll("perm").Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).ToList();
+        if (values.Count == 0) return null;
+        if (values.Count == 1 && values[0].TrimStart().StartsWith('['))
+        {
+            try
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<List<string>>(values[0]) ?? [];
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return [];
+            }
+        }
+        return values;
     }
 }
 

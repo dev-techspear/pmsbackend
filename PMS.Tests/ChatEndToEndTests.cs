@@ -46,6 +46,8 @@ public class ChatEndToEndTests : IDisposable
                 services.RemoveAll(typeof(IDbContextOptionsConfiguration<ApplicationDbContext>));
                 services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
                 services.AddDbContext<ApplicationDbContext>(o => o.UseInMemoryDatabase(dbName));
+                services.RemoveAll<IBlobStorageService>();
+                services.AddSingleton<IBlobStorageService, FakeTestBlobStorageService>();
             });
         });
         Seed().GetAwaiter().GetResult();
@@ -91,7 +93,7 @@ public class ChatEndToEndTests : IDisposable
 
     private HttpClient ClientFor(User u)
     {
-        var client = _factory.CreateClient();
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenFor(u));
         return client;
     }
@@ -445,15 +447,21 @@ public class ChatEndToEndTests : IDisposable
         var url = $"/api/v1/projects/{_project.Id}/chat/attachments/{attachment.GetProperty("id").GetInt32()}";
 
         var download = await ClientFor(_member).GetAsync(url);
-        Assert.Equal(HttpStatusCode.OK, download.StatusCode);
-        Assert.Equal(PngBytes, await download.Content.ReadAsByteArrayAsync());
-        Assert.Equal("nosniff", download.Headers.GetValues("X-Content-Type-Options").Single());
-        Assert.Equal("attachment", download.Content.Headers.ContentDisposition!.DispositionType);   // never rendered as a page
-        Assert.Contains("no-store", download.Headers.CacheControl!.ToString());
+        Assert.Equal(HttpStatusCode.Redirect, download.StatusCode);
+        Assert.NotNull(download.Headers.Location);
+        Assert.Contains("https://storage.test.local/", download.Headers.Location.ToString());
 
         Assert.Equal(HttpStatusCode.Forbidden, (await ClientFor(_stranger).GetAsync(url)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await ClientFor(_freelancerNoChat).GetAsync(url)).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await _factory.CreateClient().GetAsync(url)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false }).GetAsync(url)).StatusCode);
+    }
+
+    private sealed class FakeTestBlobStorageService : IBlobStorageService
+    {
+        public Task<string> UploadAsync(string blobPath, byte[] content, string contentType, CancellationToken ct = default)
+            => Task.FromResult(blobPath);
+        public string GetReadSasUrl(string blobPath, TimeSpan validFor, string? downloadFileName = null)
+            => "https://storage.test.local/" + blobPath;
     }
 
     [Fact]

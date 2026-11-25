@@ -22,6 +22,26 @@ public sealed class AccessScope : IAccessScope
     public bool IsAdmin { get; private set; }
     public bool IsExternal { get; private set; }
 
+    public void ApplyTokenPermissions(int userId, string? email, string? roleName, bool isExternal, IEnumerable<string> permissions)
+    {
+        _levels.Clear();
+        UserId = userId;
+        Email = email;
+        RoleId = null;
+        IsLoaded = true;
+        IsExternal = isExternal;
+        IsAdmin = string.Equals(roleName, AppConstants.RoleAdmin, StringComparison.OrdinalIgnoreCase);
+        foreach (var permission in permissions)
+        {
+            var split = permission.Split(':', 2);
+            if (split.Length != 2) continue;
+            if (split[1] is AppConstants.ViewLevelAll or AppConstants.ViewLevelOwned or AppConstants.ViewLevelAssociated)
+            {
+                _levels[split[0]] = split[1];
+            }
+        }
+    }
+
     public async Task LoadAsync(int userId)
     {
         var user = await _context.Users

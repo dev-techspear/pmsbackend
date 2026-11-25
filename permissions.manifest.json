@@ -1,0 +1,14 @@
+{
+  "systemKey": "pms",
+  "systemName": "PMS",
+  "modules": [
+    { "key": "proj", "name": "Projects", "supportsLevels": true, "actions": ["view", "create", "edit", "delete"] },
+    { "key": "task", "name": "Tasks", "supportsLevels": true, "actions": ["view"] },
+    { "key": "issue", "name": "Issues", "supportsLevels": true, "actions": ["view"] },
+    { "key": "milestone", "name": "Milestones", "supportsLevels": true, "actions": ["view"] },
+    { "key": "time", "name": "Time", "supportsLevels": true, "actions": ["view"] },
+    { "key": "chat", "name": "Chat", "supportsLevels": true, "actions": ["view", "post"] },
+    { "key": "user", "name": "Users", "supportsLevels": true, "actions": ["view", "create", "edit", "delete"] },
+    { "key": "automation", "name": "Automation", "supportsLevels": false, "actions": ["manage"] }
+  ]
+}

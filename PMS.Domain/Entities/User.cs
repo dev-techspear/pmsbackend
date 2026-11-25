@@ -24,6 +24,8 @@ public class User : AuditableEntity
     public string? Timezone { get; set; }
 
     public string? O365Id { get; set; }
+    /// <summary>Spear ID subject. Null until this person signs in through the identity hub.</summary>
+    public Guid? IdentityId { get; set; }
     public bool IsSynced { get; set; } = false;
     public bool IsExternal { get; set; } = false;
 
