@@ -35,3 +35,5 @@ htmlcov/
 .DS_Store
 .vscode/
 .idea/
+
+azure-appsettings*.json
