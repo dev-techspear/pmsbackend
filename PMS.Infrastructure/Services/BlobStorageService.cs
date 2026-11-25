@@ -22,12 +22,12 @@ public class BlobStorageService : IBlobStorageService
 
     private BlobContainerClient BuildContainerClient()
     {
-        var connectionString = _configuration["AzureBlobStorage:ConnectionString"] ?? _configuration["BlobStorage:ConnectionString"] ?? _configuration["Storage:ConnectionString"];
+        var connectionString = _configuration["BlobStorage:ConnectionString"] ?? _configuration["Storage:ConnectionString"] ?? _configuration["AzureBlobStorage:ConnectionString"];
         if (string.IsNullOrWhiteSpace(connectionString) || connectionString == "CHANGEME")
             throw new InvalidOperationException(
                 "BlobStorage:ConnectionString is not configured. Set it in appsettings.json " +
                 "(or user-secrets) once the storage account exists - see appsettings.Example.json.");
-        var containerName = _configuration["AzureBlobStorage:ContainerName"] ?? _configuration["BlobStorage:ContainerName"] ?? _configuration["Storage:ContainerName"] ?? "chat-attachments";
+        var containerName = _configuration["BlobStorage:ContainerName"] ?? _configuration["Storage:ContainerName"] ?? _configuration["AzureBlobStorage:ContainerName"] ?? "chat-attachments";
 
         // An account-key connection string gives BlobClient.GenerateSasUri everything it needs
         // to sign SAS URLs itself - no need to hold or parse the key separately here.

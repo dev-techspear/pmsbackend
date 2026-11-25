@@ -40,9 +40,9 @@ public class AuthService : BaseService<AuthService>, IAuthService
     {
         return await ExecuteAsync(async () =>
         {
-            var tenantId = _configuration["AzureAd:TenantId"] ?? _configuration["EntraAuth:TenantId"] ?? _configuration["MSAuth:TenantId"];
-            var clientId = _configuration["AzureAd:ClientId"] ?? _configuration["EntraAuth:ClientId"] ?? _configuration["MSAuth:ClientId"];
-            var clientSecret = _configuration["AzureAd:ClientSecret"] ?? _configuration["EntraAuth:ClientSecret"] ?? _configuration["MSAuth:ClientSecret"];
+            var tenantId = _configuration["EntraAuth:TenantId"] ?? _configuration["MSAuth:TenantId"] ?? _configuration["AzureAd:TenantId"];
+            var clientId = _configuration["EntraAuth:ClientId"] ?? _configuration["MSAuth:ClientId"] ?? _configuration["AzureAd:ClientId"];
+            var clientSecret = _configuration["EntraAuth:ClientSecret"] ?? _configuration["MSAuth:ClientSecret"] ?? _configuration["AzureAd:ClientSecret"];
 
             if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
