@@ -288,10 +288,16 @@ app.MapHub<PMS.API.Hubs.ChatHub>("/hubs/chat");
 
 // Seed reference/lookup data (roles, statuses, master_lookups, skills) — idempotent, so
 // safe to run on every startup. See PMS.Infrastructure/Data/DbInitializer.cs.
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await DbInitializer.SeedAsync(db);
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Failed to seed database during startup: {Message}", ex.Message);
 }
 
 app.Run();
