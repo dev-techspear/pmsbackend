@@ -1855,6 +1855,9 @@ namespace PMS.Infrastructure.Migrations
                     b.Property<int?>("RoleId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("SessionsValidFrom")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("State")
                         .HasColumnType("nvarchar(max)");
 

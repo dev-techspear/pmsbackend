@@ -102,6 +102,8 @@ public class PasswordResetService : BaseService<PasswordResetService>, IPassword
                 throw new InvalidOperationException(AppConstants.PasswordResetInvalidLinkMessage);
 
             user.PasswordHash = _hasher.Hash(newPassword!);
+            // Sign out everywhere: every token issued before this moment (access and refresh) is refused from now on.
+            user.SessionsValidFrom = now;
             row.UsedAt = now;
             var others = await _context.PasswordResetTokens.Where(t => t.UserId == user.Id && t.UsedAt == null).ToListAsync();
             foreach (var o in others) o.UsedAt = now;

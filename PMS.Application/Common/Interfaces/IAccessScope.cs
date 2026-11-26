@@ -11,6 +11,7 @@ public interface IAccessScope
     int? UserId { get; }
     string? Email { get; }
     int? RoleId { get; }
+    DateTime? SessionsValidFrom { get; }
     bool IsAdmin { get; }
     bool IsExternal { get; }
 
