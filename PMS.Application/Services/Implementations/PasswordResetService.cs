@@ -79,7 +79,14 @@ public class PasswordResetService : BaseService<PasswordResetService>, IPassword
             var sent = await _mail.SendAsync(new OutgoingMail(
                 user.Email, name, "Reset your PMS password", ResetHtml(name, link), ResetText(name, link),
                 IdempotencyKey: "pms-pwreset-" + Guid.NewGuid().ToString("N"),
-                CorrelationType: "password-reset", CorrelationId: user.Id.ToString()));
+                CorrelationType: "password-reset", CorrelationId: user.Id.ToString(),
+                TemplateKey: AppConstants.MailTemplatePasswordReset,
+                TemplateParams: new Dictionary<string, string>
+                {
+                    ["name"] = name ?? AppConstants.MailGreetingFallback,
+                    ["link"] = link,
+                    ["expiresInMinutes"] = AppConstants.PasswordResetTokenMinutes.ToString(),
+                }));
             if (!sent) LogError(new InvalidOperationException("mail not accepted"), "Password reset mail for user {UserId} was not accepted by the mail service.", user.Id);
 
             return ForgotPasswordOutcome.Accepted;
@@ -115,7 +122,12 @@ public class PasswordResetService : BaseService<PasswordResetService>, IPassword
                 $"<p>Hi {WebUtility.HtmlEncode(user.FirstName)},</p><p>The password for your PMS account was just changed. If this was you, no action is needed. If it was not, contact support@techspear.in straight away.</p>",
                 $"Hi {user.FirstName},\n\nThe password for your PMS account was just changed. If this was you, no action is needed. If it was not, contact support@techspear.in straight away.",
                 IdempotencyKey: "pms-pwchanged-" + Guid.NewGuid().ToString("N"),
-                CorrelationType: "password-changed", CorrelationId: user.Id.ToString()));
+                CorrelationType: "password-changed", CorrelationId: user.Id.ToString(),
+                TemplateKey: AppConstants.MailTemplatePasswordChanged,
+                TemplateParams: new Dictionary<string, string>
+                {
+                    ["name"] = string.IsNullOrWhiteSpace(user.FirstName) ? AppConstants.MailGreetingFallback : user.FirstName,
+                }));
             return true;
         }, nameof(ResetAsync));
     }
