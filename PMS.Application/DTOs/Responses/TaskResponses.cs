@@ -35,7 +35,11 @@ public record TaskResponse(
     IEnumerable<UserResponseBaseDto> Owners,
     IEnumerable<UserResponseBaseDto> Assignees,
     DateTime CreatedAt,
-    DateTime? UpdatedAt
+    DateTime? UpdatedAt,
+    int? ParentTaskId = null,
+    int SubtaskCount = 0,
+    int SubtasksDone = 0,
+    decimal SubtasksHours = 0m
 );
 
 public record TaskPagedResponseDto(

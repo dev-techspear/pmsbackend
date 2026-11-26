@@ -103,6 +103,29 @@ public static class AccessScopeExtensions
                             || d.Project.DeliveryHeadId == uid || d.Project.TeamMembers.Any(m => m.UserId == uid));
     }
 
+    /// <summary>Links share like documents: unrestricted = whole project; restricted = creator, Admin, shared roles/users.</summary>
+    public static IQueryable<ProjectLink> ScopeLinks(this IQueryable<ProjectLink> q, IAccessScope s)
+    {
+        if (s.IsAdmin) return q;
+        if (!s.IsLoaded || s.UserId is not int uid) return q.Where(l => !l.RestrictAccess);
+        var roleId = s.RoleId;
+        return q.Where(l => !l.RestrictAccess
+                            || l.CreatedByUserId == uid
+                            || (roleId != null && l.RoleAccess.Any(r => r.RoleId == roleId))
+                            || l.UserAccess.Any(u => u.UserId == uid));
+    }
+
+    public static IQueryable<ProjectNote> ScopeNotes(this IQueryable<ProjectNote> q, IAccessScope s)
+    {
+        if (s.IsAdmin) return q;
+        if (!s.IsLoaded || s.UserId is not int uid) return q.Where(n => !n.RestrictAccess);
+        var roleId = s.RoleId;
+        return q.Where(n => !n.RestrictAccess
+                            || n.CreatedByUserId == uid
+                            || (roleId != null && n.RoleAccess.Any(r => r.RoleId == roleId))
+                            || n.UserAccess.Any(u => u.UserId == uid));
+    }
+
     /// <summary>Same sharing model as documents; the project gate is applied by the caller.</summary>
     public static IQueryable<ProjectCredential> ScopeCredentials(this IQueryable<ProjectCredential> q, IAccessScope s)
     {

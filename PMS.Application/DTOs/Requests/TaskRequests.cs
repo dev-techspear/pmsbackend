@@ -18,7 +18,8 @@ public record CreateTaskRequest(
     decimal? EstimatedHours = null,
     string BillingType = "Billable",
     IEnumerable<int>? OwnerIds = null,
-    IEnumerable<int>? AssigneeIds = null
+    IEnumerable<int>? AssigneeIds = null,
+    int? ParentTaskId = null
 );
 
 public record TaskUpdateRequest(

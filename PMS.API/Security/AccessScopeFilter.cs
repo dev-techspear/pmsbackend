@@ -166,6 +166,15 @@ public static class ExternalPermissionMap
                 : AppConstants.PermProjectEdit;
         }
 
+        // Project links: reading needs proj-view; adding/editing/removing needs proj-edit.
+        if (controller.Equals("ProjectLinks", StringComparison.OrdinalIgnoreCase))
+            return isRead ? AppConstants.PermProjectView : AppConstants.PermProjectEdit;
+
+        // Project notes: anyone who can see the project may add one; the service limits edit/delete
+        // to the author (or an Admin).
+        if (controller.Equals("ProjectNotes", StringComparison.OrdinalIgnoreCase))
+            return AppConstants.PermProjectView;
+
         if (!Prefix.TryGetValue(controller, out var prefix)) return null;
 
         var action =

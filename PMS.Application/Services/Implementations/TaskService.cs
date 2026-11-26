@@ -23,6 +23,28 @@ public class TaskService : BaseService<TaskService>, ITaskService
         _scope = scope;
     }
 
+    private sealed record SubtaskStats(int Count, int Done, decimal Hours);
+
+    /// <summary>Sub-task counters for a page of parents, in one grouped query (no per-row lookups).</summary>
+    private async Task<Dictionary<int, SubtaskStats>> StatsForAsync(IEnumerable<int> parentIds)
+    {
+        var ids = parentIds.Distinct().ToList();
+        if (ids.Count == 0) return new();
+        var rows = await _context.Tasks.ScopeTasks(_scope)
+            .Where(t => t.ParentTaskId != null && ids.Contains(t.ParentTaskId.Value))
+            .Select(t => new
+            {
+                Parent = t.ParentTaskId!.Value,
+                t.CachedTimelogTotal,
+                Done = t.StatusMaster != null
+                       && (t.StatusMaster.Value.ToLower() == AppConstants.TaskStatusCompleted
+                           || t.StatusMaster.Label.ToLower() == AppConstants.TaskStatusCompleted),
+            })
+            .ToListAsync();
+        return rows.GroupBy(r => r.Parent).ToDictionary(
+            g => g.Key, g => new SubtaskStats(g.Count(), g.Count(x => x.Done), g.Sum(x => x.CachedTimelogTotal)));
+    }
+
     private IQueryable<TaskEntity> IncludeGraph(IQueryable<TaskEntity> query, bool scoped = true) =>
         (scoped ? query.ScopeTasks(_scope) : query)
         .Include(t => t.StatusMaster)
@@ -35,7 +57,18 @@ public class TaskService : BaseService<TaskService>, ITaskService
     {
         return await ExecuteAsync(async () =>
         {
-            await _context.EnsureProjectAccessAsync(_scope, request.ProjectId);
+            // A sub-task lives wherever its parent lives: same project, task list and milestone.
+            TaskEntity? parent = null;
+            if (request.ParentTaskId.HasValue)
+            {
+                parent = await _context.Tasks.ScopeTasks(_scope).FirstOrDefaultAsync(t => t.Id == request.ParentTaskId.Value)
+                         ?? throw new InvalidOperationException("Parent task not found.");
+                if (parent.ParentTaskId != null)
+                    throw new InvalidOperationException(
+                        $"Tasks can only be nested {AppConstants.MaxTaskDepth} levels deep: a sub-task cannot have sub-tasks of its own.");
+            }
+            var projectId = parent != null ? parent.ProjectId : request.ProjectId;
+            await _context.EnsureProjectAccessAsync(_scope, projectId);
             int? createdById = int.TryParse(actorId, out var aid) ? aid : null;
             var publicId = "TSK-" + Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
 
@@ -43,9 +76,10 @@ public class TaskService : BaseService<TaskService>, ITaskService
             {
                 PublicId = publicId,
                 TaskName = request.TaskName,
-                ProjectId = request.ProjectId,
-                TaskListId = request.TaskListId,
-                MilestoneId = request.MilestoneId,
+                ProjectId = projectId,
+                TaskListId = parent != null ? parent.TaskListId : request.TaskListId,
+                MilestoneId = parent != null ? parent.MilestoneId : request.MilestoneId,
+                ParentTaskId = parent?.Id,
                 AssociatedTeamId = request.AssociatedTeamId,
                 AssigneeId = request.AssigneeId,
                 CreatedById = createdById,
@@ -80,7 +114,7 @@ public class TaskService : BaseService<TaskService>, ITaskService
         }, nameof(CreateTaskAsync));
     }
 
-    public async Task<TaskPagedResponseDto> GetTasksAsync(int skip, int limit, int? projectId, int? taskListId, int? statusId, int? assigneeId)
+    public async Task<TaskPagedResponseDto> GetTasksAsync(int skip, int limit, int? projectId, int? taskListId, int? statusId, int? assigneeId, int? parentTaskId = null, bool topLevelOnly = false)
     {
         return await ExecuteAsync(async () =>
         {
@@ -90,11 +124,14 @@ public class TaskService : BaseService<TaskService>, ITaskService
             if (taskListId.HasValue) queryable = queryable.Where(t => t.TaskListId == taskListId);
             if (statusId.HasValue) queryable = queryable.Where(t => t.StatusId == statusId);
             if (assigneeId.HasValue) queryable = queryable.Where(t => t.AssigneeId == assigneeId);
+            if (parentTaskId.HasValue) queryable = queryable.Where(t => t.ParentTaskId == parentTaskId);
+            if (topLevelOnly) queryable = queryable.Where(t => t.ParentTaskId == null);
 
             var total = await queryable.CountAsync();
             var items = await queryable.OrderByDescending(t => t.Id).Skip(skip).Take(limit).ToListAsync();
 
-            return new TaskPagedResponseDto(total, items.Select(MapToTaskResponse));
+            var stats = await StatsForAsync(items.Select(t => t.Id));
+            return new TaskPagedResponseDto(total, items.Select(t => MapToTaskResponse(t, stats.GetValueOrDefault(t.Id))));
         }, nameof(GetTasksAsync));
     }
 
@@ -109,7 +146,8 @@ public class TaskService : BaseService<TaskService>, ITaskService
                 queryable = queryable.Where(t => t.TaskName.ToLower().Contains(term));
             }
             var items = await queryable.OrderBy(t => t.TaskName).Take(limit).ToListAsync();
-            return items.Select(MapToTaskResponse);
+            var stats = await StatsForAsync(items.Select(t => t.Id));
+            return items.Select(t => MapToTaskResponse(t, stats.GetValueOrDefault(t.Id)));
         }, nameof(SearchTasksAsync));
     }
 
@@ -118,7 +156,9 @@ public class TaskService : BaseService<TaskService>, ITaskService
         return await ExecuteAsync(async () =>
         {
             var task = await IncludeGraph(_context.Tasks).FirstOrDefaultAsync(t => t.Id == taskId);
-            return task == null ? null : MapToTaskResponse(task);
+            if (task == null) return null;
+            var stats = await StatsForAsync([task.Id]);
+            return MapToTaskResponse(task, stats.GetValueOrDefault(task.Id));
         }, nameof(GetTaskByIdAsync));
     }
 
@@ -128,6 +168,11 @@ public class TaskService : BaseService<TaskService>, ITaskService
         {
             var task = await IncludeGraph(_context.Tasks).FirstOrDefaultAsync(t => t.Id == taskId);
             if (task == null) return null;
+
+            if (task.ParentTaskId != null
+                && ((request.TaskListId.HasValue && request.TaskListId != task.TaskListId)
+                    || (request.MilestoneId.HasValue && request.MilestoneId != task.MilestoneId)))
+                throw new InvalidOperationException("A sub-task follows its parent's task list and milestone; change them on the parent.");
 
             if (request.TaskName != null) task.TaskName = request.TaskName;
             if (request.TaskListId.HasValue) task.TaskListId = request.TaskListId;
@@ -165,8 +210,16 @@ public class TaskService : BaseService<TaskService>, ITaskService
                 foreach (var a in assignees) task.Assignees.Add(a);
             }
 
+            // Moving a parent to another task list / milestone moves its sub-tasks with it.
+            if (task.ParentTaskId == null && (request.TaskListId.HasValue || request.MilestoneId.HasValue))
+            {
+                var subs = await _context.Tasks.Where(t => t.ParentTaskId == task.Id).ToListAsync();
+                foreach (var s in subs) { s.TaskListId = task.TaskListId; s.MilestoneId = task.MilestoneId; }
+            }
+
             await _context.SaveChangesAsync();
-            return MapToTaskResponse(task);
+            var stats = await StatsForAsync([task.Id]);
+            return MapToTaskResponse(task, stats.GetValueOrDefault(task.Id));
         }, nameof(UpdateTaskAsync));
     }
 
@@ -177,6 +230,9 @@ public class TaskService : BaseService<TaskService>, ITaskService
             var task = await _context.Tasks.ScopeTasks(_scope).FirstOrDefaultAsync(t => t.Id == taskId);
             if (task == null) return false;
             task.IsDeleted = true;
+            // A parent's sub-tasks go with it (they have no meaning on their own).
+            var children = await _context.Tasks.Where(t => t.ParentTaskId == taskId).ToListAsync();
+            foreach (var c in children) c.IsDeleted = true;
             await _context.SaveChangesAsync();
             return true;
         }, nameof(DeleteTaskAsync));
@@ -190,7 +246,7 @@ public class TaskService : BaseService<TaskService>, ITaskService
         ? null
         : new UserResponseBaseDto(user.Id, user.PublicId, user.Email, user.Username, user.FirstName, user.LastName, user.DisplayName, user.IsExternal, user.IsSynced);
 
-    private static TaskResponse MapToTaskResponse(TaskEntity t) => new(
+    private static TaskResponse MapToTaskResponse(TaskEntity t, SubtaskStats? stats = null) => new(
         t.Id, t.PublicId, t.TaskName, t.Description,
         t.ProjectId, t.TaskListId, t.MilestoneId, t.AssociatedTeamId,
         t.AssigneeId, MapUserBase(t.Assignee),
@@ -200,7 +256,8 @@ public class TaskService : BaseService<TaskService>, ITaskService
         t.EstimatedHours, t.WorkHours, t.CachedTimelogTotal, t.BillingType,
         t.Owners?.Select(MapUserBase).Where(x => x != null).Select(x => x!) ?? Enumerable.Empty<UserResponseBaseDto>(),
         t.Assignees?.Select(MapUserBase).Where(x => x != null).Select(x => x!) ?? Enumerable.Empty<UserResponseBaseDto>(),
-        t.CreatedAt, t.UpdatedAt
+        t.CreatedAt, t.UpdatedAt,
+        t.ParentTaskId, stats?.Count ?? 0, stats?.Done ?? 0, stats?.Hours ?? 0m
     );
 }
 

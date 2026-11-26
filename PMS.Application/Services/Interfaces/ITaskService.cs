@@ -6,7 +6,7 @@ namespace PMS.Application.Services.Interfaces;
 public interface ITaskService
 {
     System.Threading.Tasks.Task<TaskResponse> CreateTaskAsync(CreateTaskRequest request, string actorId);
-    System.Threading.Tasks.Task<TaskPagedResponseDto> GetTasksAsync(int skip, int limit, int? projectId, int? taskListId, int? statusId, int? assigneeId);
+    System.Threading.Tasks.Task<TaskPagedResponseDto> GetTasksAsync(int skip, int limit, int? projectId, int? taskListId, int? statusId, int? assigneeId, int? parentTaskId = null, bool topLevelOnly = false);
     System.Threading.Tasks.Task<IEnumerable<TaskResponse>> SearchTasksAsync(string query, int limit);
     System.Threading.Tasks.Task<TaskResponse?> GetTaskByIdAsync(int taskId);
     System.Threading.Tasks.Task<TaskResponse?> UpdateTaskAsync(int taskId, TaskUpdateRequest request, string actorId);

@@ -19,9 +19,15 @@ public class TasksController : BaseController
     [HttpPost]
     public async Task<IActionResult> CreateTask([FromBody] CreateTaskRequest request)
     {
-        var actorId = CurrentUserId;
-        var result = await _taskService.CreateTaskAsync(request, actorId);
-        return CreatedResult(result);
+        try
+        {
+            var result = await _taskService.CreateTaskAsync(request, CurrentUserId);
+            return CreatedResult(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResult(ex.Message);
+        }
     }
 
     [HttpGet("search")]
@@ -38,9 +44,11 @@ public class TasksController : BaseController
         [FromQuery(Name = "project_id")] int? projectId = null,
         [FromQuery(Name = "task_list_id")] int? taskListId = null,
         [FromQuery(Name = "status_id")] int? statusId = null,
-        [FromQuery(Name = "assignee_id")] int? assigneeId = null)
+        [FromQuery(Name = "assignee_id")] int? assigneeId = null,
+        [FromQuery(Name = "parent_task_id")] int? parentTaskId = null,
+        [FromQuery(Name = "top_level_only")] bool topLevelOnly = false)
     {
-        var result = await _taskService.GetTasksAsync(skip, limit, projectId, taskListId, statusId, assigneeId);
+        var result = await _taskService.GetTasksAsync(skip, limit, projectId, taskListId, statusId, assigneeId, parentTaskId, topLevelOnly);
         return OkResult(result);
     }
 
@@ -55,10 +63,16 @@ public class TasksController : BaseController
     [HttpPut("{taskId:int}")]
     public async Task<IActionResult> UpdateTask(int taskId, [FromBody] TaskUpdateRequest request)
     {
-        var actorId = CurrentUserId;
-        var result = await _taskService.UpdateTaskAsync(taskId, request, actorId);
-        if (result == null) return NotFoundResult("Task not found.");
-        return OkResult(result);
+        try
+        {
+            var result = await _taskService.UpdateTaskAsync(taskId, request, CurrentUserId);
+            if (result == null) return NotFoundResult("Task not found.");
+            return OkResult(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResult(ex.Message);
+        }
     }
 
     [HttpDelete("{taskId:int}")]
