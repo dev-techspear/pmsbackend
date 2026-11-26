@@ -1,0 +1,98 @@
+# Security checks: vulnerable packages, leaked secrets, known-CVE and misconfiguration scan, code scan.
+# Runs on every pull request and weekly (the weekly run starts only from the default branch).
+# Reporting only: this workflow does not gate or run any deployment. Make a job a required
+# check in branch protection only after its first findings are triaged.
+# Source of truth: 02_Projects/Spear_Ops/Spear_Ops_PLAN.md (phase 1).
+name: Security
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: "8.30.1"
+  TRIVY_VERSION: "0.76.2"
+  SEMGREP_VERSION: "1.187.0"
+
+jobs:
+  dependencies-dotnet:
+    name: Vulnerable NuGet packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: |
+          dotnet restore PMS.sln
+      - name: Fail on High or Critical vulnerable packages
+        run: |
+          : > vulnerable.txt
+          dotnet list PMS.sln package --vulnerable --include-transitive --no-restore 2>&1 | tee -a vulnerable.txt
+          if grep -E '^\s*>.*\s(High|Critical)\s' vulnerable.txt; then
+            echo "::error::A High or Critical vulnerable NuGet package was found (see the log above)."
+            exit 1
+          fi
+
+  secrets:
+    name: Leaked secrets (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks ${{ env.GITLEAKS_VERSION }} (checksum verified)
+        run: |
+          base=https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}
+          curl -sSfL -o gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz "$base/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz$" checksums.txt | sha256sum -c -
+          tar -xzf gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz gitleaks
+      - name: Scan
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Pull requests: only the commits this PR adds.
+            ./gitleaks git --redact --no-banner --log-opts="origin/${{ github.base_ref }}..HEAD"
+          else
+            # Weekly / manual: the whole history. Known and rotated findings go in .gitleaksignore.
+            ./gitleaks git --redact --no-banner
+          fi
+
+  trivy:
+    name: Known CVEs and misconfiguration (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Trivy ${{ env.TRIVY_VERSION }} (checksum verified)
+        run: |
+          base=https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}
+          curl -sSfL -o trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz "$base/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -sSfL -o checksums.txt "$base/trivy_${TRIVY_VERSION}_checksums.txt"
+          grep " trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz$" checksums.txt | sha256sum -c -
+          tar -xzf trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz trivy
+      - name: Scan the repository (High and Critical with a fix available fail)
+        run: ./trivy fs --scanners vuln,misconfig --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --skip-dirs node_modules,bin,obj .
+
+  semgrep:
+    name: Code scan (Semgrep, open-source rules)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Semgrep ${{ env.SEMGREP_VERSION }}
+        run: pipx install "semgrep==${SEMGREP_VERSION}"
+      - name: Scan (ERROR severity fails; usage metrics off)
+        run: semgrep scan --config p/default --config p/csharp --metrics=off --error --severity ERROR --exclude node_modules --exclude bin --exclude obj --exclude dist .

@@ -1,0 +1,32 @@
+# Weekly dependency updates, grouped to keep the number of pull requests small.
+# Dependabot alerts and security updates are repository settings (Settings > Code security).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        update-types: [minor, patch]
+
+  - package-ecosystem: nuget
+    directories:
+      - "/PMS.API"
+      - "/PMS.Application"
+      - "/PMS.Domain"
+      - "/PMS.Infrastructure"
+      - "/PMS.Tests"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
+    groups:
+      nuget-minor-patch:
+        update-types: [minor, patch]
