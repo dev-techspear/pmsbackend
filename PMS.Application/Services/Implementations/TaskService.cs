@@ -25,6 +25,34 @@ public class TaskService : BaseService<TaskService>, ITaskService
 
     private sealed record SubtaskStats(int Count, int Done, decimal Hours);
 
+    /// <summary>
+    /// Turns the people a caller named (by id and/or e-mail) into users. Null = the caller said nothing
+    /// (leave as is); an empty list = explicitly nobody. An e-mail that matches no PMS user is an error
+    /// rather than being dropped, so an assignment never silently fails to happen.
+    /// </summary>
+    private async Task<List<User>?> ResolvePeopleAsync(IEnumerable<int>? ids, IEnumerable<string>? emails)
+    {
+        if (ids == null && emails == null) return null;
+        var idList = (ids ?? []).Distinct().ToList();
+        var wanted = (emails ?? []).Select(e => (e ?? string.Empty).Trim().ToLowerInvariant())
+            .Where(e => e.Length > 0).Distinct().ToList();
+
+        var users = new List<User>();
+        if (idList.Count > 0)
+            users.AddRange((await _context.Users.Where(u => idList.Contains(u.Id)).ToListAsync()).OrderBy(u => idList.IndexOf(u.Id)));
+        if (wanted.Count > 0)
+        {
+            var byEmail = await _context.Users.Where(u => wanted.Contains(u.Email.ToLower())).ToListAsync();
+            var missing = wanted.Except(byEmail.Select(u => u.Email.ToLowerInvariant())).ToList();
+            if (missing.Count > 0)
+                throw new InvalidOperationException(
+                    $"These people are not PMS users yet: {string.Join(", ", missing)}. Add them under Users first.");
+            // keep the order the caller listed: the first person becomes the task's main owner/assignee
+            users.AddRange(byEmail.OrderBy(u => wanted.IndexOf(u.Email.ToLowerInvariant())));
+        }
+        return users.GroupBy(u => u.Id).Select(g => g.First()).ToList();
+    }
+
     /// <summary>Sub-task counters for a page of parents, in one grouped query (no per-row lookups).</summary>
     private async Task<Dictionary<int, SubtaskStats>> StatsForAsync(IEnumerable<int> parentIds)
     {
@@ -95,16 +123,13 @@ public class TaskService : BaseService<TaskService>, ITaskService
                 BillingType = request.BillingType,
             };
 
-            if (request.OwnerIds != null && request.OwnerIds.Any())
-            {
-                var owners = await _context.Users.Where(u => request.OwnerIds.Contains(u.Id)).ToListAsync();
-                foreach (var o in owners) task.Owners.Add(o);
-            }
-            if (request.AssigneeIds != null && request.AssigneeIds.Any())
-            {
-                var assignees = await _context.Users.Where(u => request.AssigneeIds.Contains(u.Id)).ToListAsync();
-                foreach (var a in assignees) task.Assignees.Add(a);
-            }
+            var ownerUsers = await ResolvePeopleAsync(request.OwnerIds, request.OwnerEmails);
+            var assigneeUsers = await ResolvePeopleAsync(request.AssigneeIds, request.AssigneeEmails);
+            foreach (var o in ownerUsers ?? []) task.Owners.Add(o);
+            foreach (var a in assigneeUsers ?? []) task.Assignees.Add(a);
+            // The single "owner"/"assignee" columns drive the list views: default them to the first person named.
+            if (task.OwnerId == null) task.OwnerId = ownerUsers?.FirstOrDefault()?.Id;
+            if (task.AssigneeId == null) task.AssigneeId = assigneeUsers?.FirstOrDefault()?.Id;
 
             _context.Tasks.Add(task);
             await _context.SaveChangesAsync();
@@ -197,17 +222,19 @@ public class TaskService : BaseService<TaskService>, ITaskService
             if (request.WorkHours.HasValue) task.WorkHours = request.WorkHours;
             if (request.BillingType != null) task.BillingType = request.BillingType;
 
-            if (request.OwnerIds != null)
+            var ownerUsers = await ResolvePeopleAsync(request.OwnerIds, request.OwnerEmails);
+            if (ownerUsers != null)
             {
                 task.Owners.Clear();
-                var owners = await _context.Users.Where(u => request.OwnerIds.Contains(u.Id)).ToListAsync();
-                foreach (var o in owners) task.Owners.Add(o);
+                foreach (var o in ownerUsers) task.Owners.Add(o);
+                if (!request.OwnerId.HasValue) task.OwnerId = ownerUsers.FirstOrDefault()?.Id;
             }
-            if (request.AssigneeIds != null)
+            var assigneeUsers = await ResolvePeopleAsync(request.AssigneeIds, request.AssigneeEmails);
+            if (assigneeUsers != null)
             {
                 task.Assignees.Clear();
-                var assignees = await _context.Users.Where(u => request.AssigneeIds.Contains(u.Id)).ToListAsync();
-                foreach (var a in assignees) task.Assignees.Add(a);
+                foreach (var a in assigneeUsers) task.Assignees.Add(a);
+                if (!request.AssigneeId.HasValue) task.AssigneeId = assigneeUsers.FirstOrDefault()?.Id;
             }
 
             // Moving a parent to another task list / milestone moves its sub-tasks with it.
