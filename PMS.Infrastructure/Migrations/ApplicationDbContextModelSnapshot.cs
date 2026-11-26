@@ -970,6 +970,93 @@ namespace PMS.Infrastructure.Migrations
                     b.ToTable("project_groups", "pms");
                 });
 
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LinkType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RestrictAccess")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("project_links", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectLinkRoleAccess", b =>
+                {
+                    b.Property<int>("LinkId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("LinkId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("project_link_role_accesses", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectLinkUserAccess", b =>
+                {
+                    b.Property<int>("LinkId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("LinkId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("project_link_user_accesses", "pms");
+                });
+
             modelBuilder.Entity("PMS.Domain.Entities.ProjectMember", b =>
                 {
                     b.Property<int>("ProjectId")
@@ -1014,6 +1101,86 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("project_members", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RestrictAccess")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("project_notes", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectNoteRoleAccess", b =>
+                {
+                    b.Property<int>("NoteId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("NoteId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("project_note_role_accesses", "pms");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectNoteUserAccess", b =>
+                {
+                    b.Property<int>("NoteId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("NoteId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("project_note_user_accesses", "pms");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.ProjectTemplate", b =>
@@ -1203,6 +1370,9 @@ namespace PMS.Infrastructure.Migrations
                     b.Property<int?>("OwnerId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ParentTaskId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("PreviousStatusId")
                         .HasColumnType("int");
 
@@ -1250,6 +1420,8 @@ namespace PMS.Infrastructure.Migrations
                     b.HasIndex("MilestoneId");
 
                     b.HasIndex("OwnerId");
+
+                    b.HasIndex("ParentTaskId");
 
                     b.HasIndex("PreviousStatusId");
 
@@ -2185,6 +2357,63 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectLink", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectLinkRoleAccess", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.ProjectLink", "Link")
+                        .WithMany("RoleAccess")
+                        .HasForeignKey("LinkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Link");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectLinkUserAccess", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.ProjectLink", "Link")
+                        .WithMany("UserAccess")
+                        .HasForeignKey("LinkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Link");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PMS.Domain.Entities.ProjectMember", b =>
                 {
                     b.HasOne("PMS.Domain.Entities.MasterLookup", "InvitationStatusMaster")
@@ -2214,6 +2443,63 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("PreviousInvitationStatusMaster");
 
                     b.Navigation("Project");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectNote", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectNoteRoleAccess", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.ProjectNote", "Note")
+                        .WithMany("RoleAccess")
+                        .HasForeignKey("NoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Note");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectNoteUserAccess", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.ProjectNote", "Note")
+                        .WithMany("UserAccess")
+                        .HasForeignKey("NoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Note");
 
                     b.Navigation("User");
                 });
@@ -2262,6 +2548,11 @@ namespace PMS.Infrastructure.Migrations
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("PMS.Domain.Entities.Task", "ParentTask")
+                        .WithMany("SubTasks")
+                        .HasForeignKey("ParentTaskId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("PMS.Domain.Entities.MasterLookup", "PreviousStatusMaster")
                         .WithMany()
                         .HasForeignKey("PreviousStatusId")
@@ -2294,6 +2585,8 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("Creator");
 
                     b.Navigation("Milestone");
+
+                    b.Navigation("ParentTask");
 
                     b.Navigation("PreviousStatusMaster");
 
@@ -2571,6 +2864,20 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("UserAccess");
                 });
 
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectLink", b =>
+                {
+                    b.Navigation("RoleAccess");
+
+                    b.Navigation("UserAccess");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.ProjectNote", b =>
+                {
+                    b.Navigation("RoleAccess");
+
+                    b.Navigation("UserAccess");
+                });
+
             modelBuilder.Entity("PMS.Domain.Entities.ProjectTemplate", b =>
                 {
                     b.Navigation("Tasks");
@@ -2583,6 +2890,8 @@ namespace PMS.Infrastructure.Migrations
 
             modelBuilder.Entity("PMS.Domain.Entities.Task", b =>
                 {
+                    b.Navigation("SubTasks");
+
                     b.Navigation("Timelogs");
                 });
 

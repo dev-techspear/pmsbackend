@@ -33,6 +33,12 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<ProjectCredentialRoleAccess> ProjectCredentialRoleAccesses => Set<ProjectCredentialRoleAccess>();
     public DbSet<ProjectCredentialUserAccess> ProjectCredentialUserAccesses => Set<ProjectCredentialUserAccess>();
     public DbSet<ProjectCredentialAccessLog> ProjectCredentialAccessLogs => Set<ProjectCredentialAccessLog>();
+    public DbSet<ProjectLink> ProjectLinks => Set<ProjectLink>();
+    public DbSet<ProjectLinkRoleAccess> ProjectLinkRoleAccesses => Set<ProjectLinkRoleAccess>();
+    public DbSet<ProjectLinkUserAccess> ProjectLinkUserAccesses => Set<ProjectLinkUserAccess>();
+    public DbSet<ProjectNote> ProjectNotes => Set<ProjectNote>();
+    public DbSet<ProjectNoteRoleAccess> ProjectNoteRoleAccesses => Set<ProjectNoteRoleAccess>();
+    public DbSet<ProjectNoteUserAccess> ProjectNoteUserAccesses => Set<ProjectNoteUserAccess>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<ChatReadState> ChatReadStates => Set<ChatReadState>();
     public DbSet<ChatMention> ChatMentions => Set<ChatMention>();
@@ -118,6 +124,13 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
         modelBuilder.Entity<Task>()
             .HasIndex(t => t.PublicId).IsUnique();
+
+        // Sub-tasks: self-reference; NoAction because SQL Server forbids cascade paths on a self-FK
+        // (the service soft-deletes sub-tasks along with their parent).
+        modelBuilder.Entity<Task>()
+            .HasOne(t => t.ParentTask).WithMany(t => t.SubTasks)
+            .HasForeignKey(t => t.ParentTaskId).OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<Task>().HasIndex(t => t.ParentTaskId);
 
         modelBuilder.Entity<Issue>()
             .HasIndex(i => i.PublicId).IsUnique();
@@ -524,6 +537,47 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<ProjectCredentialAccessLog>().Property(l => l.Action).HasMaxLength(30);
         modelBuilder.Entity<ProjectCredentialAccessLog>().HasIndex(l => l.CredentialId);
+
+        // Project links & notes (same sharing model as documents)
+        modelBuilder.Entity<ProjectLink>().HasQueryFilter(x => !x.IsDeleted);
+        modelBuilder.Entity<ProjectLink>().Property(x => x.Title).HasMaxLength(200);
+        modelBuilder.Entity<ProjectLink>().Property(x => x.Url).HasMaxLength(2000);
+        modelBuilder.Entity<ProjectLink>().Property(x => x.LinkType).HasMaxLength(30);
+        modelBuilder.Entity<ProjectLink>().Property(x => x.Description).HasMaxLength(1000);
+        modelBuilder.Entity<ProjectLink>().HasIndex(x => x.ProjectId);
+        modelBuilder.Entity<ProjectLink>().HasOne(x => x.Project).WithMany()
+            .HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProjectLink>().HasOne(x => x.CreatedByUser).WithMany()
+            .HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<ProjectLinkRoleAccess>().HasKey(x => new { x.LinkId, x.RoleId });
+        modelBuilder.Entity<ProjectLinkRoleAccess>().HasOne(x => x.Link).WithMany(l => l.RoleAccess)
+            .HasForeignKey(x => x.LinkId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProjectLinkRoleAccess>().HasOne(x => x.Role).WithMany()
+            .HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProjectLinkUserAccess>().HasKey(x => new { x.LinkId, x.UserId });
+        modelBuilder.Entity<ProjectLinkUserAccess>().HasOne(x => x.Link).WithMany(l => l.UserAccess)
+            .HasForeignKey(x => x.LinkId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProjectLinkUserAccess>().HasOne(x => x.User).WithMany()
+            .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProjectNote>().HasQueryFilter(x => !x.IsDeleted);
+        modelBuilder.Entity<ProjectNote>().Property(x => x.Title).HasMaxLength(200);
+        modelBuilder.Entity<ProjectNote>().Property(x => x.Body).HasMaxLength(10000);
+        modelBuilder.Entity<ProjectNote>().HasIndex(x => x.ProjectId);
+        modelBuilder.Entity<ProjectNote>().HasOne(x => x.Project).WithMany()
+            .HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProjectNote>().HasOne(x => x.CreatedByUser).WithMany()
+            .HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<ProjectNoteRoleAccess>().HasKey(x => new { x.NoteId, x.RoleId });
+        modelBuilder.Entity<ProjectNoteRoleAccess>().HasOne(x => x.Note).WithMany(n => n.RoleAccess)
+            .HasForeignKey(x => x.NoteId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProjectNoteRoleAccess>().HasOne(x => x.Role).WithMany()
+            .HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProjectNoteUserAccess>().HasKey(x => new { x.NoteId, x.UserId });
+        modelBuilder.Entity<ProjectNoteUserAccess>().HasOne(x => x.Note).WithMany(n => n.UserAccess)
+            .HasForeignKey(x => x.NoteId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ProjectNoteUserAccess>().HasOne(x => x.User).WithMany()
+            .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
 
         // Document Relations
         modelBuilder.Entity<Document>()

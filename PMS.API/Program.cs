@@ -292,7 +292,8 @@ try
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
+    // Migrations only exist for a relational database (the test host runs on the in-memory provider).
+    if (db.Database.IsRelational()) await db.Database.MigrateAsync();
     await DbInitializer.SeedAsync(db);
 }
 catch (Exception ex)

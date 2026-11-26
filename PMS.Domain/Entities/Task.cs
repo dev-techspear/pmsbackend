@@ -53,6 +53,11 @@ public class Task : AuditableEntity
     public int? PreviousStatusId { get; set; }
     public MasterLookup? PreviousStatusMaster { get; set; }
 
+    /// <summary>Set on a sub-task. Depth is capped by AppConstants.MaxTaskDepth (task + sub-task).</summary>
+    public int? ParentTaskId { get; set; }
+    public Task? ParentTask { get; set; }
+    public ICollection<Task> SubTasks { get; set; } = new List<Task>();
+
     public ICollection<User> Owners { get; set; } = new List<User>();
     public ICollection<User> Assignees { get; set; } = new List<User>();
     public ICollection<TimeLog> Timelogs { get; set; } = new List<TimeLog>();

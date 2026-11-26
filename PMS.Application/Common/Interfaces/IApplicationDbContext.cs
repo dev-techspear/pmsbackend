@@ -27,6 +27,12 @@ public interface IApplicationDbContext
     DbSet<ProjectCredentialRoleAccess> ProjectCredentialRoleAccesses { get; }
     DbSet<ProjectCredentialUserAccess> ProjectCredentialUserAccesses { get; }
     DbSet<ProjectCredentialAccessLog> ProjectCredentialAccessLogs { get; }
+    DbSet<ProjectLink> ProjectLinks { get; }
+    DbSet<ProjectLinkRoleAccess> ProjectLinkRoleAccesses { get; }
+    DbSet<ProjectLinkUserAccess> ProjectLinkUserAccesses { get; }
+    DbSet<ProjectNote> ProjectNotes { get; }
+    DbSet<ProjectNoteRoleAccess> ProjectNoteRoleAccesses { get; }
+    DbSet<ProjectNoteUserAccess> ProjectNoteUserAccesses { get; }
     DbSet<ChatMessage> ChatMessages { get; }
     DbSet<ChatReadState> ChatReadStates { get; }
     DbSet<ChatMention> ChatMentions { get; }

@@ -224,6 +224,13 @@ public class AccessScopeTests
     [InlineData("Chat", "PUT", "/api/v1/projects/3/chat/messages/8", "chat-post")]
     [InlineData("Chat", "DELETE", "/api/v1/projects/3/chat/messages/8", "chat-post")]
     [InlineData("Credentials", "GET", "/api/v1/projects/3/credentials", "proj-view")]
+    [InlineData("ProjectLinks", "GET", "/api/v1/projects/3/links", "proj-view")]
+    [InlineData("ProjectLinks", "POST", "/api/v1/projects/3/links", "proj-edit")]
+    [InlineData("ProjectLinks", "PUT", "/api/v1/projects/3/links/2", "proj-edit")]
+    [InlineData("ProjectLinks", "DELETE", "/api/v1/projects/3/links/2", "proj-edit")]
+    [InlineData("ProjectNotes", "GET", "/api/v1/projects/3/notes", "proj-view")]
+    [InlineData("ProjectNotes", "POST", "/api/v1/projects/3/notes", "proj-view")]
+    [InlineData("ProjectNotes", "DELETE", "/api/v1/projects/3/notes/2", "proj-view")]
     [InlineData("Credentials", "POST", "/api/v1/projects/3/credentials/4/reveal", "proj-view")]
     [InlineData("Credentials", "POST", "/api/v1/projects/3/credentials", "proj-edit")]
     [InlineData("Credentials", "PUT", "/api/v1/projects/3/credentials/4", "proj-edit")]
@@ -245,7 +252,7 @@ public class AccessScopeTests
         var reachable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "Auth", "Masters", "Users", "Projects", "ProjectGroups", "ProjectTemplates", "Documents",
-            "Tasks", "TaskLists", "Issues", "Milestones", "TimeLogs", "Timesheets", "Teams", "Chat", "Credentials",
+            "Tasks", "TaskLists", "Issues", "Milestones", "TimeLogs", "Timesheets", "Teams", "Chat", "Credentials", "ProjectLinks", "ProjectNotes",
         };
         // Audit = system logs; Graph = searches the whole company directory (names/emails of every employee).
         var closed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Audit", "Graph" };

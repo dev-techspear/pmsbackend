@@ -65,6 +65,16 @@ public static class AppConstants
         ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip",
     ];
 
+    // Tasks: a task and its sub-tasks. A sub-task cannot have sub-tasks of its own.
+    public const int MaxTaskDepth = 2;
+    public const string TaskStatusCompleted = "completed";
+
+    // Project links & notes
+    public static readonly string[] LinkTypes = ["Repo", "Live", "Staging", "Design", "Docs", "Other"];
+    public static readonly string[] LinkAllowedSchemes = ["http", "https"];
+    public const int LinkMaxUrlLength = 2000;
+    public const int NoteMaxBodyLength = 10000;
+
     // Project credentials
     public static readonly string[] CredentialTypes = ["Server", "Database", "ApiKey", "Git", "Cloud", "Application", "Other"];
     public const string CredentialActionReveal = "REVEAL";
