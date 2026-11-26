@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PMS.Application.Common;
 using PMS.Application.DTOs.Requests;
 using PMS.Application.Services.Interfaces;
 using PMS.Domain.Constants;
@@ -12,10 +13,12 @@ namespace PMS.API.Controllers;
 public class AuthController : BaseController
 {
     private readonly IAuthService _authService;
+    private readonly IPasswordResetService _passwordReset;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IPasswordResetService passwordReset)
     {
         _authService = authService;
+        _passwordReset = passwordReset;
     }
 
     [HttpPost("redirect")]
@@ -54,6 +57,34 @@ public class AuthController : BaseController
         catch (UnauthorizedAccessException ex)
         {
             return UnauthorizedResult(ex.Message);
+        }
+    }
+
+    /// <summary>Always answers the same way for a known or unknown email. 503 only when no mail service is set up.</summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(AppConstants.AuthRateLimitPolicy)]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest payload)
+    {
+        var outcome = await _passwordReset.RequestAsync(payload?.Email);
+        if (outcome == ForgotPasswordOutcome.Unavailable)
+            return StatusCode(503, ApiResponse<object>.Fail(AppConstants.PasswordResetUnavailableMessage));
+        return OkResult(new { message = AppConstants.PasswordResetSentMessage });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(AppConstants.AuthRateLimitPolicy)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest payload)
+    {
+        try
+        {
+            await _passwordReset.ResetAsync(payload?.Token, payload?.NewPassword);
+            return OkResult(new { message = "Your password has been changed. You can sign in now." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResult(ex.Message);
         }
     }
 

@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentFileService, DocumentFileService>();
         services.AddScoped<ICredentialService, CredentialService>();
         services.AddScoped<IProjectLinkService, ProjectLinkService>();
+        services.AddScoped<IPasswordResetService, PasswordResetService>();
         services.AddScoped<IProjectNoteService, ProjectNoteService>();
         services.AddScoped<IProjectGroupService, ProjectGroupService>();
         services.AddScoped<IProjectTemplateService, ProjectTemplateService>();

@@ -662,6 +662,41 @@ namespace PMS.Infrastructure.Migrations
                     b.ToTable("milestones", "pms");
                 });
 
+            modelBuilder.Entity("PMS.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("password_reset_tokens", "pms");
+                });
+
             modelBuilder.Entity("PMS.Domain.Entities.Project", b =>
                 {
                     b.Property<int>("Id")
@@ -2248,6 +2283,17 @@ namespace PMS.Infrastructure.Migrations
                     b.Navigation("Project");
 
                     b.Navigation("StatusMaster");
+                });
+
+            modelBuilder.Entity("PMS.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.HasOne("PMS.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("PMS.Domain.Entities.Project", b =>
