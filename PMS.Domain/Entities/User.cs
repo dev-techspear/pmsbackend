@@ -16,6 +16,12 @@ public class User : AuditableEntity
 
     public string? PasswordHash { get; set; }
 
+    /// <summary>
+    /// Sign-out-everywhere marker: a PMS-issued token created at or before this moment is refused.
+    /// Set when the password is reset. Null = never revoked.
+    /// </summary>
+    public DateTime? SessionsValidFrom { get; set; }
+
     public string? DisplayName { get; set; }
     public string? Gender { get; set; }
     public string? Country { get; set; }

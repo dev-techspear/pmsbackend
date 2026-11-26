@@ -17,6 +17,10 @@ public class TokenService : ITokenService
         _configuration = configuration;
     }
 
+    // "iat" lets the API refuse tokens issued before a password reset (see SessionRevocation).
+    private static Claim IssuedAtClaim() =>
+        new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64);
+
     public string GenerateAccessToken(User user)
     {
         var secretKey = _configuration["SECRET_KEY"] ?? "0ad7e425b1d48f0cefc36120b071b4b8f078e7d0689b2b0a001b430f2626799a";
@@ -32,7 +36,8 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role?.Name ?? "Employee")
+            new Claim(ClaimTypes.Role, user.Role?.Name ?? "Employee"),
+            IssuedAtClaim()
         };
 
         var token = new JwtSecurityToken(
@@ -53,7 +58,8 @@ public class TokenService : ITokenService
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim("type", "refresh")
+            new Claim("type", "refresh"),
+            IssuedAtClaim()
         };
 
         var token = new JwtSecurityToken(

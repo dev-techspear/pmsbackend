@@ -75,6 +75,7 @@ public static class AppConstants
     public const string PasswordResetUnavailableMessage =
         "Password reset by email is not available yet. Please contact support@techspear.in.";
     public const string MailProfileDefault = "noreply";
+    public const string SessionEndedMessage = "Your session has ended. Please sign in again.";
 
     // Tasks: a task and its sub-tasks. A sub-task cannot have sub-tasks of its own.
     public const int MaxTaskDepth = 2;

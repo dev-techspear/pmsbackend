@@ -42,6 +42,19 @@ public class AccessScopeFilter : IAsyncActionFilter
             else
             {
                 await _scope.LoadAsync(userId);
+
+            // PMS-issued tokens (no "iss") from before a password reset are refused. Tokens from the Spear ID
+            // hub are not PMS's to revoke.
+            var principal = context.HttpContext.User;
+            if (_scope.IsLoaded && principal.FindFirst("iss") == null
+                && SessionRevocation.IsRevoked(_scope.SessionsValidFrom, principal.FindFirstValue("iat")))
+            {
+                context.Result = new ObjectResult(ApiResponse<object>.Fail(AppConstants.SessionEndedMessage))
+                {
+                    StatusCode = StatusCodes.Status401Unauthorized,
+                };
+                return;
+            }
             }
 
             if (_scope.IsExternal && !_scope.IsAdmin)

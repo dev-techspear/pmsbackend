@@ -287,6 +287,13 @@ public class AuthService : BaseService<AuthService>, IAuthService
                 throw new UnauthorizedAccessException("User not found or inactive.");
             }
 
+            // A password reset signs the account out everywhere: older refresh tokens stop working.
+            var issuedAt = principal?.Claims.FirstOrDefault(c => c.Type == "iat")?.Value;
+            if (SessionRevocation.IsRevoked(user.SessionsValidFrom, issuedAt))
+            {
+                throw new UnauthorizedAccessException(AppConstants.SessionEndedMessage);
+            }
+
             return BuildTokenResponse(user);
         }, nameof(RefreshTokenAsync));
     }
