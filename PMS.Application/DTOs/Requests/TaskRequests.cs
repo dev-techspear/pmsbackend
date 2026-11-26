@@ -19,7 +19,9 @@ public record CreateTaskRequest(
     string BillingType = "Billable",
     IEnumerable<int>? OwnerIds = null,
     IEnumerable<int>? AssigneeIds = null,
-    int? ParentTaskId = null
+    int? ParentTaskId = null,
+    IEnumerable<string>? OwnerEmails = null,
+    IEnumerable<string>? AssigneeEmails = null
 );
 
 public record TaskUpdateRequest(
@@ -42,7 +44,9 @@ public record TaskUpdateRequest(
     decimal? WorkHours = null,
     string? BillingType = null,
     IEnumerable<int>? OwnerIds = null,
-    IEnumerable<int>? AssigneeIds = null
+    IEnumerable<int>? AssigneeIds = null,
+    IEnumerable<string>? OwnerEmails = null,
+    IEnumerable<string>? AssigneeEmails = null
 );
 
 public record CreateTaskListRequest(
