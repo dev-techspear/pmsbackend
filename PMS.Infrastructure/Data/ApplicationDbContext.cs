@@ -33,6 +33,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<ProjectCredentialRoleAccess> ProjectCredentialRoleAccesses => Set<ProjectCredentialRoleAccess>();
     public DbSet<ProjectCredentialUserAccess> ProjectCredentialUserAccesses => Set<ProjectCredentialUserAccess>();
     public DbSet<ProjectCredentialAccessLog> ProjectCredentialAccessLogs => Set<ProjectCredentialAccessLog>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<ProjectLink> ProjectLinks => Set<ProjectLink>();
     public DbSet<ProjectLinkRoleAccess> ProjectLinkRoleAccesses => Set<ProjectLinkRoleAccess>();
     public DbSet<ProjectLinkUserAccess> ProjectLinkUserAccesses => Set<ProjectLinkUserAccess>();
@@ -537,6 +538,13 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<ProjectCredentialAccessLog>().Property(l => l.Action).HasMaxLength(30);
         modelBuilder.Entity<ProjectCredentialAccessLog>().HasIndex(l => l.CredentialId);
+
+        // Forgot-password tokens: hash only, unique, removed with the user
+        modelBuilder.Entity<PasswordResetToken>().Property(t => t.TokenHash).HasMaxLength(64);
+        modelBuilder.Entity<PasswordResetToken>().HasIndex(t => t.TokenHash).IsUnique();
+        modelBuilder.Entity<PasswordResetToken>().HasIndex(t => t.UserId);
+        modelBuilder.Entity<PasswordResetToken>().HasOne(t => t.User).WithMany()
+            .HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
 
         // Project links & notes (same sharing model as documents)
         modelBuilder.Entity<ProjectLink>().HasQueryFilter(x => !x.IsDeleted);

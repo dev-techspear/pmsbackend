@@ -19,6 +19,10 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddSingleton<PMS.API.Hubs.ChatConnectionRegistry>();
 builder.Services.AddSingleton<PMS.Application.Common.Interfaces.IChatAccessSync, PMS.API.Hubs.ChatAccessSync>();
 builder.Services.AddApplicationServices();
+// Forgot-password e-mail goes through the Techspear Mail Service (see MailService:* settings).
+builder.Services.AddHttpClient<PMS.Application.Common.Interfaces.IMailSender, PMS.Infrastructure.Services.TechspearMailClient>();
+builder.Services.AddSingleton(new PMS.Application.Common.PasswordResetSettings(
+    builder.Configuration["Frontend:BaseUrl"] ?? (builder.Environment.IsDevelopment() ? "http://localhost:3018" : "")));
 
 // 2. JWT Authentication.
 //

@@ -65,6 +65,17 @@ public static class AppConstants
         ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip",
     ];
 
+    // Forgot password (external users with a local password)
+    public const int PasswordResetTokenMinutes = 60;
+    public const int PasswordResetMaxRequestsPerHour = 3;
+    public const string PasswordResetSentMessage =
+        "If that email belongs to a PMS account, we have sent a link to set a new password. It works once and expires in 60 minutes.";
+    public const string PasswordResetInvalidLinkMessage =
+        "This password reset link is invalid or has expired. Request a new one.";
+    public const string PasswordResetUnavailableMessage =
+        "Password reset by email is not available yet. Please contact support@techspear.in.";
+    public const string MailProfileDefault = "noreply";
+
     // Tasks: a task and its sub-tasks. A sub-task cannot have sub-tasks of its own.
     public const int MaxTaskDepth = 2;
     public const string TaskStatusCompleted = "completed";

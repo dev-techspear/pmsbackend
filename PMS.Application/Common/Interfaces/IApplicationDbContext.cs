@@ -27,6 +27,7 @@ public interface IApplicationDbContext
     DbSet<ProjectCredentialRoleAccess> ProjectCredentialRoleAccesses { get; }
     DbSet<ProjectCredentialUserAccess> ProjectCredentialUserAccesses { get; }
     DbSet<ProjectCredentialAccessLog> ProjectCredentialAccessLogs { get; }
+    DbSet<PasswordResetToken> PasswordResetTokens { get; }
     DbSet<ProjectLink> ProjectLinks { get; }
     DbSet<ProjectLinkRoleAccess> ProjectLinkRoleAccesses { get; }
     DbSet<ProjectLinkUserAccess> ProjectLinkUserAccesses { get; }
