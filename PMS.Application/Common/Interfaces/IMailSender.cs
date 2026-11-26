@@ -1,5 +1,10 @@
 namespace PMS.Application.Common.Interfaces;
 
+/// <summary>
+/// One transactional e-mail. When <see cref="TemplateKey"/> is set the mail service renders its own
+/// template with <see cref="TemplateParams"/>; <see cref="Subject"/>, <see cref="Html"/> and <see cref="Text"/>
+/// are then only the fallback used if that template is missing, inactive or not allowed for the profile.
+/// </summary>
 public record OutgoingMail(
     string ToEmail,
     string? ToName,
@@ -8,7 +13,9 @@ public record OutgoingMail(
     string Text,
     string IdempotencyKey,
     string? CorrelationType = null,
-    string? CorrelationId = null);
+    string? CorrelationId = null,
+    string? TemplateKey = null,
+    IReadOnlyDictionary<string, string>? TemplateParams = null);
 
 /// <summary>Sends transactional e-mail through the Techspear Mail Service.</summary>
 public interface IMailSender

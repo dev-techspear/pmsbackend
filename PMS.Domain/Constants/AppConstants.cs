@@ -75,6 +75,11 @@ public static class AppConstants
     public const string PasswordResetUnavailableMessage =
         "Password reset by email is not available yet. Please contact support@techspear.in.";
     public const string MailProfileDefault = "noreply";
+    // Templates held in the Techspear Mail Service (edited there, in the dashboard Templates page).
+    public const string MailTemplatePasswordReset = "pms.account.password.reset";
+    public const string MailTemplatePasswordChanged = "pms.account.password.changed";
+    // Shown in the greeting when a person has no first name ("Hi there,").
+    public const string MailGreetingFallback = "there";
     public const string SessionEndedMessage = "Your session has ended. Please sign in again.";
 
     // Tasks: a task and its sub-tasks. A sub-task cannot have sub-tasks of its own.

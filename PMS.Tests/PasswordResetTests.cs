@@ -259,15 +259,24 @@ public class PasswordResetTests
 
     private sealed class CapturingHandler : HttpMessageHandler
     {
-        public HttpRequestMessage? Request;
-        public string? Body;
+        public HttpRequestMessage? Request;                 // the last request
+        public string? Body;                                // its body
+        public List<(string Key, string Body)> Calls { get; } = new();
         public HttpStatusCode Status = HttpStatusCode.Accepted;
+        /// <summary>Answers for call 1, 2, ... (falls back to <see cref="Status"/>). Body text is returned with each answer.</summary>
+        public List<(HttpStatusCode Status, string Content)> Script { get; } = new();
         public bool Throw;
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             if (Throw) throw new HttpRequestException("boom");
             Request = request;
             Body = request.Content == null ? null : await request.Content.ReadAsStringAsync(ct);
+            Calls.Add((request.Headers.GetValues("Idempotency-Key").Single(), Body ?? ""));
+            if (Calls.Count <= Script.Count)
+            {
+                var s = Script[Calls.Count - 1];
+                return new HttpResponseMessage(s.Status) { Content = new StringContent(s.Content) };
+            }
             return new HttpResponseMessage(Status) { Content = new StringContent("{\"data\":{\"id\":\"msg_1\",\"status\":\"queued\"}}") };
         }
     }
@@ -365,5 +374,156 @@ public class PasswordResetTests
         Assert.True(client.IsConfigured);
         Assert.True(await client.SendAsync(Msg()));
         Assert.Null(h.Request);
+    }
+
+    // ================================================================ templates
+
+    [Fact]
+    public async Task The_reset_mail_asks_for_the_pms_reset_template_with_name_link_and_expiry()
+    {
+        using var w = await BuildAsync();
+        w.External.FirstName = "Ravi";
+        await w.Db.SaveChangesAsync();
+
+        await w.Service.RequestAsync("ravi@example.com");
+
+        var mail = Assert.Single(w.Mail.Sent);
+        Assert.Equal("pms.account.password.reset", mail.TemplateKey);
+        Assert.Equal(new[] { "expiresInMinutes", "link", "name" }, mail.TemplateParams!.Keys.OrderBy(k => k).ToArray());
+        Assert.Equal("Ravi", mail.TemplateParams["name"]);
+        Assert.Equal("60", mail.TemplateParams["expiresInMinutes"]);
+        Assert.StartsWith(Frontend + "/reset-password?token=", mail.TemplateParams["link"]);
+        Assert.EndsWith(w.LastToken(), mail.TemplateParams["link"]);
+        // the plain version stays on the mail as the fallback
+        Assert.False(string.IsNullOrWhiteSpace(mail.Html));
+        Assert.False(string.IsNullOrWhiteSpace(mail.Text));
+    }
+
+    [Fact]
+    public async Task A_person_without_a_first_name_is_greeted_as_there()
+    {
+        using var w = await BuildAsync();
+        w.External.FirstName = "";
+        await w.Db.SaveChangesAsync();
+
+        await w.Service.RequestAsync("ravi@example.com");
+
+        Assert.Equal("there", w.Mail.Sent.Single().TemplateParams!["name"]);
+    }
+
+    [Fact]
+    public async Task The_password_changed_notice_asks_for_the_pms_changed_template_with_the_name()
+    {
+        using var w = await BuildAsync();
+        w.External.FirstName = "Ravi";
+        await w.Db.SaveChangesAsync();
+        await w.Service.RequestAsync("ravi@example.com");
+
+        await w.Service.ResetAsync(w.LastToken(), NewPassword);
+
+        var notice = w.Mail.Sent.Last();
+        Assert.Equal("pms.account.password.changed", notice.TemplateKey);
+        Assert.Equal(new[] { "name" }, notice.TemplateParams!.Keys.ToArray());
+        Assert.Equal("Ravi", notice.TemplateParams["name"]);
+    }
+
+    private static OutgoingMail TemplateMsg() => new("ravi@example.com", "Ravi", "Subject", "<p>Hi</p>", "Hi", "key-1", "password-reset", "7",
+        TemplateKey: "pms.account.password.reset",
+        TemplateParams: new Dictionary<string, string> { ["name"] = "Ravi", ["link"] = "https://x.test/reset?token=abc", ["expiresInMinutes"] = "60" });
+
+    private const string TemplateRefused = "{\"error\":{\"code\":\"VALIDATION_ERROR\",\"details\":[{\"field\":\"template.key\",\"message\":\"unknown\"}]}}";
+
+    [Fact]
+    public async Task Client_sends_a_template_request_without_subject_or_html()
+    {
+        var h = new CapturingHandler();
+        Assert.True(await Client(h, Real).SendAsync(TemplateMsg()));
+
+        var call = Assert.Single(h.Calls);
+        Assert.Equal("key-1", call.Key);
+        using var doc = JsonDocument.Parse(call.Body);
+        var root = doc.RootElement;
+        Assert.Equal("pms.account.password.reset", root.GetProperty("template").GetProperty("key").GetString());
+        var p = root.GetProperty("template").GetProperty("params");
+        Assert.Equal("Ravi", p.GetProperty("name").GetString());
+        Assert.Equal("https://x.test/reset?token=abc", p.GetProperty("link").GetString());
+        Assert.Equal("60", p.GetProperty("expiresInMinutes").GetString());
+        // the contract: template OR subject+html, never both
+        Assert.False(root.TryGetProperty("subject", out _));
+        Assert.False(root.TryGetProperty("html", out _));
+        Assert.False(root.TryGetProperty("text", out _));
+        Assert.Equal("noreply", root.GetProperty("profile").GetString());
+    }
+
+    [Fact]
+    public async Task When_the_template_is_refused_the_plain_version_is_sent_once_with_its_own_idempotency_key()
+    {
+        var h = new CapturingHandler();
+        h.Script.Add((HttpStatusCode.BadRequest, TemplateRefused));
+
+        Assert.True(await Client(h, Real).SendAsync(TemplateMsg()));
+
+        Assert.Equal(2, h.Calls.Count);
+        Assert.Equal("key-1", h.Calls[0].Key);
+        Assert.Equal("key-1-raw", h.Calls[1].Key);
+        using var second = JsonDocument.Parse(h.Calls[1].Body);
+        Assert.Equal("Subject", second.RootElement.GetProperty("subject").GetString());
+        Assert.Equal("<p>Hi</p>", second.RootElement.GetProperty("html").GetString());
+        Assert.False(second.RootElement.TryGetProperty("template", out _));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.UnprocessableEntity)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    public async Task Only_a_template_problem_triggers_the_fallback_other_failures_are_not_retried(HttpStatusCode status)
+    {
+        var h = new CapturingHandler();
+        h.Script.Add((status, TemplateRefused));   // even a body that mentions the template: the status decides
+
+        Assert.False(await Client(h, Real).SendAsync(TemplateMsg()));
+        Assert.Single(h.Calls);
+    }
+
+    [Fact]
+    public async Task A_400_that_is_not_about_the_template_is_not_retried()
+    {
+        var h = new CapturingHandler();
+        h.Script.Add((HttpStatusCode.BadRequest, "{\"error\":{\"details\":[{\"field\":\"to[0].email\",\"message\":\"invalid\"}]}}"));
+
+        Assert.False(await Client(h, Real).SendAsync(TemplateMsg()));
+        Assert.Single(h.Calls);
+    }
+
+    [Fact]
+    public async Task If_even_the_plain_version_fails_the_send_is_reported_as_failed()
+    {
+        var h = new CapturingHandler();
+        h.Script.Add((HttpStatusCode.BadRequest, TemplateRefused));
+        h.Script.Add((HttpStatusCode.Unauthorized, "{}"));
+
+        Assert.False(await Client(h, Real).SendAsync(TemplateMsg()));
+        Assert.Equal(2, h.Calls.Count);
+    }
+
+    [Fact]
+    public async Task A_template_mail_with_no_plain_version_is_not_retried_when_the_template_is_refused()
+    {
+        var h = new CapturingHandler();
+        h.Script.Add((HttpStatusCode.BadRequest, TemplateRefused));
+        var mail = TemplateMsg() with { Html = "", Text = "" };
+
+        Assert.False(await Client(h, Real).SendAsync(mail));
+        Assert.Single(h.Calls);
+    }
+
+    [Fact]
+    public async Task Dev_log_only_mode_still_sends_nothing_for_template_mail()
+    {
+        var h = new CapturingHandler();
+        Assert.True(await Client(h, new() { ["MailService:DevLogOnly"] = "true" }).SendAsync(TemplateMsg()));
+        Assert.Empty(h.Calls);
     }
 }
