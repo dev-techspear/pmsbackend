@@ -49,6 +49,7 @@ public static class AppConstants
     public const string PermUserEdit = "user-edit";
     public const string PermUserDelete = "user-delete";
     public const string PermAutomationManage = "automation-manage";
+    public const string PermAuditView = "audit-view";
 
     // Project chat
     public const int ChatMaxBodyLength = 4000;

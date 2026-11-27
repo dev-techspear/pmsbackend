@@ -57,6 +57,19 @@ public class AccessScopeFilter : IAsyncActionFilter
             }
             }
 
+            // The audit log is readable only with audit-view (Admin always can), for internal and external users alike.
+            if (_scope.IsLoaded && !_scope.IsAdmin
+                && ((context.ActionDescriptor as ControllerActionDescriptor)?.ControllerName ?? "")
+                    .Equals("Audit", StringComparison.OrdinalIgnoreCase)
+                && _scope.Level(AppConstants.PermAuditView) == null)
+            {
+                context.Result = new ObjectResult(ApiResponse<object>.Fail("Access denied."))
+                {
+                    StatusCode = StatusCodes.Status403Forbidden,
+                };
+                return;
+            }
+
             if (_scope.IsExternal && !_scope.IsAdmin)
             {
                 var controller = (context.ActionDescriptor as ControllerActionDescriptor)?.ControllerName ?? "";
@@ -159,6 +172,10 @@ public static class ExternalPermissionMap
             if (HttpMethods.IsDelete(method)) return AppConstants.PermUserDelete;
             return AppConstants.PermUserEdit;
         }
+
+        // Audit log: read-only, needs audit-view.
+        if (controller.Equals("Audit", StringComparison.OrdinalIgnoreCase))
+            return isRead ? AppConstants.PermAuditView : null;
 
         // Project chat: reading (and marking read) needs chat-view, writing needs chat-post.
         if (controller.Equals("Chat", StringComparison.OrdinalIgnoreCase))

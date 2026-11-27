@@ -63,7 +63,8 @@ public static class DbInitializer
          "user-view":true,"user-create":true,"user-edit":true,"user-delete":true,
          "team-view":true,"team-create":true,"team-edit":true,"team-delete":true,
          "report-view":true,"report-export":true,
-         "settings-view":true,"settings-edit":true,"role-manage":true,"automation-manage":true}
+         "settings-view":true,"settings-edit":true,"role-manage":true,"automation-manage":true,
+         "audit-view":true}
         """;
 
         // "Freelancer" is the restricted role for external (email + password) users: empty permission set.
@@ -84,6 +85,11 @@ public static class DbInitializer
             else if (roleName == "Admin" && (role.Permissions == "{}" || string.IsNullOrWhiteSpace(role.Permissions)))
             {
                 role.Permissions = adminPermissions;
+            }
+            else if (roleName == "Admin" && !role.Permissions.Contains("\"audit-view\""))
+            {
+                // Admin gained a new permission: tick it on an existing Admin role without touching the rest.
+                role.Permissions = role.Permissions.TrimEnd().TrimEnd('}').TrimEnd() + ",\"audit-view\":true}";
             }
         }
     }

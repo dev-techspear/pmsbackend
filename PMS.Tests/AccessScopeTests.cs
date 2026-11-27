@@ -200,7 +200,8 @@ public class AccessScopeTests
     [InlineData("Users", "GET", "/api/v1/users/me", ExternalPermissionMap.Allowed)]
     [InlineData("Users", "GET", "/api/v1/users", "user-view")]
     [InlineData("Users", "DELETE", "/api/v1/users/5", "user-delete")]
-    [InlineData("Audit", "GET", "/api/v1/audit", null)]
+    [InlineData("Audit", "GET", "/api/v1/audit", "audit-view")]
+    [InlineData("Audit", "POST", "/api/v1/audit", null)]
     [InlineData("Projects", "GET", "/api/v1/projects", "proj-view")]
     [InlineData("Projects", "POST", "/api/v1/projects", "proj-create")]
     [InlineData("Projects", "PUT", "/api/v1/projects/3", "proj-edit")]
@@ -252,10 +253,10 @@ public class AccessScopeTests
         var reachable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "Auth", "Masters", "Users", "Projects", "ProjectGroups", "ProjectTemplates", "Documents",
-            "Tasks", "TaskLists", "Issues", "Milestones", "TimeLogs", "Timesheets", "Teams", "Chat", "Credentials", "ProjectLinks", "ProjectNotes",
+            "Tasks", "TaskLists", "Issues", "Milestones", "TimeLogs", "Timesheets", "Teams", "Chat", "Credentials", "ProjectLinks", "ProjectNotes", "Audit",
         };
-        // Audit = system logs; Graph = searches the whole company directory (names/emails of every employee).
-        var closed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Audit", "Graph" };
+        // Graph = searches the whole company directory (names/emails of every employee).
+        var closed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Graph" };
 
         foreach (var c in controllers)
         {
